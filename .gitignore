@@ -9,6 +9,7 @@ _verify/__pycache__/
 # ---- 运行生成的结果网格与图片 ----
 demo/slf_*.txt
 grace_example/slf_*.txt
+grace_example/*.BAD_*
 slf_figure*.png
 slf_图_掩膜修复对比.png
 
