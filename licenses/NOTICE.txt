@@ -1,0 +1,113 @@
+================================================================================
+ 海平面指纹（SLF）计算程序 —— 第三方组件与许可声明
+ Third-Party Notices
+================================================================================
+
+本文件随本程序一同分发，声明本程序所使用的第三方组件的版权与许可，
+**不改变各组件自身的许可条款**。
+
+This file is distributed with this application. It states the copyright and
+licence of the third-party components used. It does not alter the terms of any
+of those licences.
+
+--------------------------------------------------------------------------------
+1. 本程序自身 / The application itself
+--------------------------------------------------------------------------------
+Copyright (c) 2026 彭桢燃 (Zhenran Peng), 中国地质大学（武汉）
+China University of Geosciences (Wuhan)
+
+算法出自：
+Sun J. W., Wang L. S., Peng Z. R., Fu Z. Y., Chen C (2022). The sea level
+fingerprints of global terrestrial water storage changes detected by GRACE and
+GRACE-FO data. Pure and Applied Geophysics, 179(9), 3303–3317.
+https://doi.org/10.1007/s00024-022-03099-5
+
+--------------------------------------------------------------------------------
+2. Qt for Python (PySide6) —— 图形界面 / GUI   ★ 重点
+--------------------------------------------------------------------------------
+组件    : PySide6-Essentials 与 Qt 6 运行库
+版本    : PySide6-Essentials 6.8.3 / Qt 6.8.x
+版权    : Copyright (C) The Qt Company Ltd. and contributors.
+许可    : GNU Lesser General Public License v3 (LGPL-3.0)
+          亦提供 GPL-3.0 与商业许可作为替代。
+
+本程序依据 LGPL-3.0 条款使用 PySide6 与 Qt，并满足以下条件：
+
+  (a) **动态链接**：PySide6 与 Qt 以共享库（.dll）形式使用，本程序未以任何方式
+      静态链接 Qt，也未将其并入本程序的二进制；
+  (b) **未修改**：本程序未对 PySide6 或 Qt 的源代码作任何修改；
+  (c) **可替换**：用户可以用自行编译或从其他来源获取的同版本 Qt 库替换安装目录
+      中的 Qt 库，并重新运行本程序；
+  (d) **随附许可**：完整的 LGPL-3.0 与 GPL-3.0 文本随本程序安装目录下的
+      licenses/ 一并提供；
+  (e) **版权声明**：以上版权声明在本文件中保留。
+
+遵守以上条件时，依据 LGPL-3.0 分发本程序**不需要公开本程序自身的源代码**。
+
+⚠️ 注意：完整版 PySide6 发行包会附带 PySide6-Addons，其中的 Qt Charts 与
+Qt Data Visualization 等模块为 GPL-only。本程序**刻意只依赖
+PySide6-Essentials**，且全部绘图使用 matplotlib，不导入任何 GPL-only 的 Qt 模块。
+
+--------------------------------------------------------------------------------
+3. 数值与绘图依赖 / Numerical and plotting dependencies
+--------------------------------------------------------------------------------
+numpy          BSD-3-Clause          Copyright (c) NumPy Developers
+matplotlib     PSF-based (BSD 兼容)  Copyright (c) Matplotlib Development Team
+cartopy        LGPL-3.0              Copyright (c) British Crown (Met Office)
+shapely        BSD-3-Clause          Copyright (c) Sean Gillies
+pyproj         MIT                   Copyright (c) PyProj contributors
+pyshp          MIT                   Copyright (c) Joel Lawhead
+pillow         HPND (MIT 兼容)       Copyright (c) Jeffrey A. Clark
+contourpy      BSD-3-Clause          Copyright (c) ContourPy developers
+cycler         BSD-3-Clause          Copyright (c) Thomas A. Caswell
+fonttools      MIT                   Copyright (c) Just van Rossum
+kiwisolver     BSD-3-Clause          Copyright (c) The kiwisolver developers
+pyparsing      MIT                   Copyright (c) Paul McGuire
+python-dateutil BSD-3-Clause / Apache-2.0  Copyright (c) dateutil developers
+six            MIT                   Copyright (c) Benjamin Peterson
+certifi        MPL-2.0               Copyright (c) Kenneth Reitz
+
+matplotlib 使用 Python Software Foundation 风格的许可（BSD 兼容），
+可自由用于闭源商业软件；本程序的所有科学绘图均由其完成。
+cartopy 为 LGPL-3.0，同样以未修改的动态库方式使用。
+
+pyproj 在运行时使用 PROJ 坐标转换库（MIT 风格许可，X/MIT）；
+其自带的 PROJ 数据文件为公有领域。
+
+--------------------------------------------------------------------------------
+4. 数据 / Data
+--------------------------------------------------------------------------------
+Natural Earth 110m 海岸线 / 陆地 / 海洋 / 国界
+    Natural Earth 为**公有领域**（public domain），无使用限制。
+    https://www.naturalearthdata.com/
+
+grace_example/ 示例数据
+    CSR GRACE/GRACE-FO RL06.3 mascon（all-corrections）重力场产品，
+    由 Center for Space Research, University of Texas at Austin 发布。
+    随包仅作演示之用；正式研究中请遵循原始数据发布方的引用与使用要求。
+
+love_numbers 负荷勒夫数
+    Wang H., Xiang L., Jia L., Jiang L., Wang Z., Hu B., Gao P. (2012).
+    Load Love numbers and Green's functions for elastic Earth models
+    PREM, iasp91, ak135, and modified models with refined crustal structure
+    from Crust 2.0. Computers & Geosciences, 49, 190–199.
+
+--------------------------------------------------------------------------------
+5. 打包工具（不随本程序分发）/ Packaging tool (not redistributed)
+--------------------------------------------------------------------------------
+PyInstaller 为 GPL-2.0 **with a special exception**：该例外明确允许使用
+PyInstaller 打包的程序采用任意许可（包括闭源商业许可）。
+PyInstaller 本身不随本程序分发。
+
+Inno Setup（用于生成安装程序）采用修改版 BSD 许可，允许自由分发由其生成的
+安装程序；Inno Setup 本身不随本程序分发。
+
+--------------------------------------------------------------------------------
+6. 免责声明
+--------------------------------------------------------------------------------
+本程序按"现状"提供，不附带任何明示或暗示的担保。作者不对使用本程序所产生的
+任何后果承担责任。使用前请自行核对算例与结果。
+
+本文件由开发者整理，旨在协助合规，**不构成法律意见**。
+This file is not legal advice.
+================================================================================

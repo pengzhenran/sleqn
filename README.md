@@ -76,6 +76,38 @@ SHA256（v1.0.1）：
 
 程序内按 F1 可打开完整中文使用说明。
 
+## 源码与文档
+
+本仓库同时提供全部源码、说明书与示例数据：
+
+| 文件 | 说明 |
+| --- | --- |
+| `sleqn_dp.f90` | **修正版 Fortran95**，推荐使用 |
+| `sleqn.f90` | 原文版 Fortran95，与论文附录逐行一致，便于对照 |
+| `sleqn.py` | Python/NumPy 版，与修正版在合成算例上输出逐字节相同 |
+| `sleqn_gui.py` | PySide6 图形界面 |
+| `README_sleqn.md` | 完整使用说明：编译、命令行参数、GUI、变量对照、验证结果 |
+| `docs/使用说明.html` | 图文版说明书（程序内按 F1 打开的就是它） |
+| `总结报告_可编辑版.html` | 方法、公式、算法与验证的图文报告（配图在 `figs/`） |
+| `验证报告_第三方工具交叉验证.md` | 与 gravity-toolkit、pyslfp、解析闭式解的逐项对照 |
+| `海平面指纹_文章整理.md` | 原文整理，含原始代码的问题清单 |
+| `packaging/` | Inno Setup 打包脚本、依赖清单、离线底图数据（复现安装包） |
+| `demo/`、`grace_example/` | 合成算例与真实 CSR GRACE 示例数据 |
+| `tools/`、`_verify/` | 说明书与图标生成脚本、第三方交叉验证脚本 |
+
+编译与运行：
+
+```bash
+# Fortran 版（静态链接，便于分发）
+gfortran -O2 -static -o sleqn_dp.exe sleqn_dp.f90
+
+# Python 版
+python sleqn.py --mask demo/land.fcn.1_deg --love demo/love_numbers --list demo/Filelist.txt
+
+# 图形界面（依赖见 packaging/requirements.txt）
+python sleqn_gui.py
+```
+
 ## 引用
 
 本程序实现并求解海平面方程，方法出自：

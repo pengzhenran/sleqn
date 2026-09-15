@@ -1,0 +1,24 @@
+# ---- 开发环境与缓存 ----
+__pycache__/
+*.pyc
+_gentest/
+_verify/venv-gravtk/
+_verify/venv-pyslfp/
+_verify/__pycache__/
+
+# ---- 运行生成的结果网格与图片 ----
+demo/slf_*.txt
+grace_example/slf_*.txt
+slf_figure*.png
+slf_图_掩膜修复对比.png
+
+# ---- 打包/构建产物 ----
+build/
+dist/
+sleqn_build/
+demo/*.exe
+
+# ---- 对外发布产物（不进仓库） ----
+公众号文章_*.docx
+屏幕截图*.png
+总结报告.html

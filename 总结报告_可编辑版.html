@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>海平面指纹（SLF）计算方法、程序实现与验证总结报告</title>
+<script>
+  window.MathJax = {
+    tex: {inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$', '$$'], ['\\[', '\\]']]},
+    svg: {fontCache: 'global'}
+  };
+</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<style>
+  :root{
+    --ink:#1c2230; --sub:#5b6472; --line:#e2e6ec; --bg:#f6f8fa;
+    --blue:#1565c0; --red:#c62828; --green:#2e7d32; --orange:#ef6c00;
+    --card:#ffffff;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:"Microsoft YaHei","PingFang SC","Hiragino Sans GB","Source Han Sans SC",sans-serif;
+    font-size:16px; line-height:1.85;
+  }
+  .wrap{max-width:1080px; margin:0 auto; padding:0 22px 90px;}
+  header.hero{
+    background:linear-gradient(135deg,#0d2b4e 0%,#1565c0 55%,#3d8fd6 100%);
+    color:#fff; padding:54px 22px 46px; margin-bottom:34px;
+    box-shadow:0 6px 22px rgba(13,43,78,.18);
+  }
+  header.hero .inner{max-width:1080px;margin:0 auto;}
+  header.hero h1{font-size:30px; line-height:1.4; margin:0 0 10px; font-weight:700; letter-spacing:.5px;}
+  header.hero .sub{font-size:15.5px; opacity:.92;}
+  header.hero .meta{margin-top:20px; font-size:13.5px; opacity:.85; border-top:1px solid rgba(255,255,255,.25); padding-top:14px;}
+  header.hero .meta span{display:inline-block; margin-right:22px;}
+  h2{
+    font-size:23px; margin:52px 0 18px; padding-left:14px; border-left:5px solid var(--blue);
+    line-height:1.3;
+  }
+  h3{font-size:18.5px; margin:32px 0 12px; color:#0d2b4e;}
+  h4{font-size:16.5px; margin:22px 0 8px; color:var(--sub);}
+  p{margin:12px 0;}
+  a{color:var(--blue);}
+  code{
+    background:#eef2f7; padding:2px 6px; border-radius:4px;
+    font-family:Consolas,"Cascadia Mono",Menlo,monospace; font-size:13.6px; color:#0b4a8f;
+  }
+  pre{
+    background:#0f172a; color:#e6edf3; padding:16px 18px; border-radius:10px; overflow:auto;
+    font-family:Consolas,"Cascadia Mono",Menlo,monospace; font-size:13.2px; line-height:1.6;
+    box-shadow:0 3px 12px rgba(15,23,42,.18);
+  }
+  pre code{background:none; color:inherit; padding:0; font-size:inherit;}
+  pre .k{color:#ff7b72;} pre .s{color:#a5d6ff;} pre .c{color:#8b949e;} pre .n{color:#79c0ff;}
+  table{
+    width:100%; border-collapse:collapse; margin:18px 0; background:var(--card);
+    box-shadow:0 1px 4px rgba(20,30,50,.08); border-radius:8px; overflow:hidden; font-size:14.6px;
+  }
+  th,td{padding:10px 13px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top;}
+  th{background:#eaf0f7; font-weight:600; color:#0d2b4e; white-space:nowrap;}
+  tr:last-child td{border-bottom:none;}
+  tbody tr:hover{background:#f9fbfd;}
+  td.num,th.num{text-align:right; font-variant-numeric:tabular-nums;}
+  figure{margin:24px 0; text-align:center;}
+  figure img{max-width:100%; border:1px solid var(--line); border-radius:10px;
+    box-shadow:0 3px 14px rgba(20,30,50,.10); background:#fff;}
+  figcaption{font-size:13.6px; color:var(--sub); margin-top:10px; line-height:1.7; text-align:left;
+    padding:0 4px;}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:12px;
+    padding:18px 22px; margin:20px 0; box-shadow:0 1px 4px rgba(20,30,50,.06);}
+  .note{border-left:4px solid var(--blue); background:#eef6ff;}
+  .warn{border-left:4px solid var(--orange); background:#fff6ec;}
+  .ok{border-left:4px solid var(--green); background:#eefaf0;}
+  .bad{border-left:4px solid var(--red); background:#fdeeee;}
+  .card h4{margin-top:0; color:var(--ink);}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:18px;}
+  .grid4{display:grid; grid-template-columns:repeat(4,1fr); gap:14px;}
+  @media (max-width:820px){.grid2,.grid4{grid-template-columns:1fr;}}
+  .kpi{background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px 16px; text-align:center;}
+  .kpi .v{font-size:24px; font-weight:700; color:var(--blue); font-variant-numeric:tabular-nums;}
+  .kpi .l{font-size:12.8px; color:var(--sub); margin-top:4px;}
+  /* 流程图 */
+  .flow{display:flex; flex-direction:column; align-items:center; gap:6px; margin:22px 0;}
+  .fbox{
+    width:min(760px,100%); background:var(--card); border:1.5px solid #c9d6e4; border-radius:10px;
+    padding:11px 16px; font-size:14.4px; position:relative;
+  }
+  .fbox b{color:#0d2b4e;}
+  .fbox.io{border-color:#a5d6ff; background:#f2f8ff;}
+  .fbox.loop{border-color:#ffcc80; background:#fff9f0;}
+  .fbox.out{border-color:#b7dfbf; background:#f2fbf4;}
+  .farrow{color:#8fa4bb; font-size:17px; line-height:1;}
+  .f1{font-family:Consolas,monospace; font-size:12.8px; color:#5b6472;}
+  .loopnote{font-size:13px; color:var(--orange); margin-left:8px;}
+  ul,ol{margin:12px 0 12px 4px; padding-left:24px;}
+  li{margin:6px 0;}
+  .tag{display:inline-block; font-size:12.4px; padding:1px 9px; border-radius:20px; margin-right:6px;
+    background:#eaf0f7; color:#0d2b4e; border:1px solid #cfdcea;}
+  .tag.g{background:#eefaf0; border-color:#bfe3c6; color:#20632c;}
+  .tag.r{background:#fdeeee; border-color:#f3c9c9; color:#9c2222;}
+  .tag.o{background:#fff6ec; border-color:#f2d5b3; color:#96530a;}
+  .toc{background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px 26px;}
+  .toc ol{columns:2; column-gap:34px; margin:0;}
+  @media (max-width:700px){.toc ol{columns:1;}}
+  .toc a{text-decoration:none;}
+  .toc a:hover{text-decoration:underline;}
+  hr{border:none; border-top:1px solid var(--line); margin:40px 0;}
+  .small{font-size:13.4px; color:var(--sub);}
+  .mono{font-family:Consolas,"Cascadia Mono",Menlo,monospace; font-size:13.4px;}
+  .hl{background:#fff3cd; padding:1px 4px; border-radius:3px;}
+  @media print{
+    body{background:#fff;} header.hero{box-shadow:none;} figure img{box-shadow:none;}
+    h2{page-break-after:avoid;} figure{page-break-inside:avoid;}
+  }
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="inner">
+    <h1>海平面指纹（Sea Level Fingerprints, SLF）<br>计算方法、程序实现与验证总结报告</h1>
+    <div class="sub">从海平面方程到 Fortran / Python 双实现，再到逐点数值核验与缺陷归因</div>
+    <div class="meta">
+      <span>配套代码：<b>sleqn.f90</b>（原文版）/ <b>sleqn_dp.f90</b>（修正版）/ <b>sleqn.py</b>（Python 版）</span>
+      <span>算例：合成演示数据（100 个网格单元，niter = 2）</span>
+      <span>编译器：gfortran 16.1.0（MinGW-w64 UCRT）</span>
+      <span>Python：3.14.6 + NumPy 2.4.6</span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+<div id="mjx-warn" class="card warn" style="display:none">
+  <h4>公式未能渲染</h4>
+  <p>本报告中的数学公式由 <b>MathJax</b> 渲染，需要联网加载一次。当前显示的是 LaTeX 源码
+  （例如 <code>$$S(\theta,\psi,t)=C[G^{L}-R^{L}]$$</code>）。联网后刷新页面即可正常显示公式；
+  报告中的表格、插图与全部结论不受影响。</p>
+</div>
+
+<div class="toc">
+  <b>目录</b>
+  <ol>
+    <li><a href="#s1">摘要：一页看懂</a></li>
+    <li><a href="#s2">研究背景与意义</a></li>
+    <li><a href="#s3">物理原理与数学公式</a></li>
+    <li><a href="#s4">算法流程与实现细节</a></li>
+    <li><a href="#s5">代码介绍：Fortran 版与 Python 版</a></li>
+    <li><a href="#s6">试验设计与验证结果</a></li>
+    <li><a href="#s7">发现的缺陷与修正（对比验证的核心产出）</a></li>
+    <li><a href="#s8">使用方法与参数说明</a></li>
+    <li><a href="#s9">结论与建议</a></li>
+    <li><a href="#s10">文件清单与参考文献</a></li>
+  </ol>
+</div>
+
+<!-- ==================================================================== -->
+<h2 id="s1">1　摘要：一页看懂</h2>
+
+<p>本报告系统总结了<strong>海平面指纹（SLF）</strong>的物理背景、数学原理、数值算法，以及同一算法
+<strong>Fortran与 Python 两套实现</strong>的完整对比验证过程。核心结论如下：</p>
+
+<div class="grid4" style="margin:20px 0;">
+  <div class="kpi"><div class="v">9.99e-15 <span style="font-size:14px">cm</span></div>
+    <div class="l">修正版 Fortran 与 Python 版<br>最大差异（机器精度）</div></div>
+  <div class="kpi"><div class="v">64800 / 64800</div>
+    <div class="l">输出文本逐字节完全相同的行数<br>（同一 E12.4 格式）</div></div>
+  <div class="kpi"><div class="v">3 处</div>
+    <div class="l">原文代码中经实测确认的<br>缺陷（已定位、已修正、已量化）</div></div>
+  <div class="kpi"><div class="v">0.33 %</div>
+    <div class="l">原文版相对"真解"的偏差<br>（最大 3.43e-03 cm）</div></div>
+</div>
+
+<p>三个缺陷是本次验证最实质的产出，它们都不影响算法的正确性，但会污染数值结果或妨碍使用：</p>
+
+<table>
+  <thead><tr><th style="width:70px">编号</th><th>缺陷</th><th style="width:330px">对最终海平面指纹的影响（实测）</th></tr></thead>
+  <tbody>
+    <tr><td><span class="tag r">缺陷 1</span></td>
+        <td>字面常量被截断为<strong>单精度</strong>（<code>1./sqrt(2.)</code>、<code>sqrt(2.0)</code>、<code>3./5.517</code>、<code>6.371E3**2</code>、<code>pi=3.14159265</code> 等），经 <code>gdisc</code> 中
+            $temp(l)=\frac{P_{l-1}(\cos\alpha)-P_{l+1}(\cos\alpha)}{2}$ 的<strong>灾难性抵消</strong>放大 10⁵ 倍</td>
+        <td><b>3.98e-03 cm</b>（占场最大值 0.38 %）<br><span class="small">单胞球谐系数误差 0.3 %~0.6 %</span></td></tr>
+    <tr><td><span class="tag r">缺陷 2</span></td>
+        <td><code>pmh</code> 一行引用了<strong>已失效的循环变量</strong> <code>l</code>（循环结束后 = 181），
+            分母变成 363 而非应有的 5，极移反馈被削弱约 72 倍</td>
+        <td><b>1.41e-03 cm</b>（占 0.14 %）<br><span class="small">残差功率 97.7 % 集中在 (l,m)=(2,1)</span></td></tr>
+    <tr><td><span class="tag r">缺陷 3</span></td>
+        <td>输出文件 <code>Open(20, File=nameout)</code> 未指定 <code>Status</code>，
+            gfortran 对<strong>已存在的文件按只读打开</strong>，第二次运行必然崩溃</td>
+        <td>不影响数值，但导致<b>无法重复运行</b><br><span class="small">报错：Cannot write to file opened for READ</span></td></tr>
+  </tbody>
+</table>
+
+<div class="card ok">
+  <h4>修正版做了什么</h4>
+  <p>在<strong>不改动任何公式与算法</strong>的前提下：① 把受影响的字面常量提升为双精度（加 <code>D0</code>／改用 <code>dsqrt</code>、<code>dfloat</code>）；
+  ② 把 <code>pmh</code> 分母写死为 <code>float(2*2+1)</code>；③ 输出文件用 <code>Status='replace'</code>，输入文件用 <code>Status='old'</code>；
+  ④ 增加输入文件存在性检查（避免双击运行闪退）。修正后与 Python 版<strong>逐字节一致</strong>。</p>
+</div>
+
+<!-- ==================================================================== -->
+<h2 id="s2">2　研究背景与意义</h2>
+
+<h3>2.1　什么是海平面指纹</h3>
+
+<p>海洋、陆地及大气三者之间在全球范围内的水体交换，将导致水质量不均匀地重新分配；伴随冰川均衡调整（GIA），
+会激发固体地球的<strong>弹性与黏弹性响应</strong>，继而造成全球海平面呈现出空间差异，具有典型的区域性特征，
+即<strong>海平面指纹（Sea Level Fingerprints, SLF）</strong>。</p>
+
+<p>早在 19 世纪学者们就意识到这种指纹效应，并给出了最基本的物理解释。近些年来，随着冰盖冰川整体消融的加速，
+主要受这些因素驱动的海平面指纹逐渐成为区域海平面的主要表征形式。因此，在研究海洋问题时，考虑海平面指纹的影响变得愈发重要。</p>
+
+<div class="card note">
+  <h4>为什么必须考虑指纹效应</h4>
+  <ul>
+    <li>研究大洋间水体质量交换时，海平面指纹的差异可能导致<strong>估算的海水迁移质量改变一半左右</strong>（Hsu and Velicogna, 2017）；</li>
+    <li>利用卫星测高和卫星重力数据更精准地监测格陵兰及南极冰盖消融、区域乃至全球海平面变化，
+        考虑海平面指纹的渗透影响是其中的关键（Adhikari et al., 2019; Pfeffer et al., 2018; Wang et al., 2018）；</li>
+    <li>海洋区域气候事件追踪（Pico et al., 2020）、GIA 探究（Simon et al., 2018）、潮汐监测（Ross et al., 2017）、
+        大地震对海洋质量变化的影响（Tang et al., 2020）等问题中，海平面指纹都是需要重点关注的因素。</li>
+  </ul>
+</div>
+
+<h3>2.2　原文结果图</h3>
+
+<figure>
+  <img src="figs/fig8_paper.jpg" alt="原文结果图">
+  <figcaption><b>图 1</b>　原文给出的结果图（作者提供截图）。<b>上幅</b>：全球陆地水储量变化长期趋势
+  （Change in land water storage），单位 mm/yr，色标 −30~30；<b>下幅</b>：由该质量变化驱动的
+  <b>相对海平面变化</b>（Change in relative sea level），即海平面指纹，单位 mm/yr，色标 −3~3；
+  图中红色实线为平均值。<br>
+  可见指纹的量级（±3 mm/yr）比陆地水储量变化本身小一个数量级，且空间分布并非均匀升降，
+  而是与载荷位置相关的区域性图案——这正是"指纹"一词的来源。</figcaption>
+</figure>
+
+<!-- ==================================================================== -->
+<h2 id="s3">3　物理原理与数学公式</h2>
+
+<h3>3.1　海平面方程</h3>
+
+<p>计算海平面指纹需要借助<strong>海平面方程</strong>。在只考虑弹性响应影响下，计算主要依赖于
+<strong>大地水准面</strong>与<strong>固体地球表面弹性负荷形变</strong>之间的差异。某一时刻的海平面变化定义为：</p>
+
+$$S(\theta,\psi,t) = C(\theta,\psi,t)\left[\,G^{L}(\theta,\psi,t) - R^{L}(\theta,\psi,t)\,\right]$$
+
+<p>其中：</p>
+<ul>
+  <li>$\theta$、$\psi$ —— 分别为<strong>余纬</strong>和<strong>东经</strong>；</li>
+  <li>$S(\theta,\psi,t)$ —— 代表海平面的变化；</li>
+  <li>$C(\theta,\psi,t)$ —— <strong>海洋函数</strong>（Munk and MacDonald, 1960），在海洋及陆地区域分别为 1 与 0；</li>
+  <li>$G^{L}(\theta,\psi,t)$ 与 $R^{L}(\theta,\psi,t)$ —— 负荷 $L$ 影响下<strong>大地水准面异常</strong>及<strong>固体表面径向位移</strong>。</li>
+</ul>
+
+<p>具体计算流程方法可参见 Sun et al., (2022)。此外还需叠加一个 0 阶常数项以满足海水质量守恒
+（全球海洋质量变化 = 陆地水质量变化的相反数），代码中即为迭代里不断修正的 <code>amass</code>。</p>
+
+<figure>
+  <img src="figs/fig1_principle.png" alt="海平面方程原理示意">
+  <figcaption><b>图 2</b>　海平面方程的物理图像（示意，形变已放大）。正质量载荷（冰盖增长）同时
+  <b>抬高大地水准面</b>（$G^{L}>0$）并<b>使固体地球表面下沉／隆起</b>（$R^{L}$），
+  两者之差再乘上海洋函数即为海平面变化 $S$。正质量载荷会"吸引"海水向其堆积，因此
+  <b>载荷处海面抬升、远场海面相对下降</b>；冰盖消融时情形相反——这正是指纹区别于均匀（eustatic）海面变化的根本原因。</figcaption>
+</figure>
+
+<h3>3.2　球谐展开与斯托克斯系数</h3>
+
+<p>把 $S$、$G^{L}$、$R^{L}$、$C$ 在球面上按归一化球谐函数展开后，海平面方程变成对球谐系数的线性方程组。
+设 $l$、$m$ 为阶与次，完全归一化（$\int \bar P_{lm}^2\,d\Omega = 4\pi$）的勒让德函数为 $\bar P_{lm}(\cos\theta)$，则</p>
+
+$$S(\theta,\psi,t)=\sum_{l=0}^{L}\sum_{m=0}^{l}
+\Big[\,C^{S}_{lm}\cos m\psi + S^{S}_{lm}\sin m\psi\,\Big]\bar P_{lm}(\cos\theta)$$
+
+<p>任意网格函数 $f(\theta,\psi)$ 的斯托克斯系数由球面积分给出（对应子程序 <code>geoid</code>）：</p>
+
+$$C_{lm}=\frac{1}{4\pi}\int_0^{2\pi}\!\!\int_0^{\pi} f(\theta,\psi)\,\bar P_{lm}(\cos\theta)\cos m\psi\,\sin\theta\,d\theta\,d\psi,
+\qquad S_{lm}=\frac{1}{4\pi}\int\!\!\int f\,\bar P_{lm}\sin m\psi\,\sin\theta\,d\theta\,d\psi$$
+
+<p>数值实现采用<strong>中点求积</strong>：把上式离散为对经纬网格的双重求和，
+$d\theta=\pi/n_{th}$、$d\psi=2\pi/n_{phi}$ 为常数权重的面积因子，$\sin\theta$ 由余纬给出。</p>
+
+<h3>3.3　负荷勒夫数与"自吸引 + 负荷"系数</h3>
+
+<p>负荷 $L$ 引起的重力势、大地水准面异常与固体位移由<strong>负荷勒夫数</strong> $h_l$、$k_l$ 联系。
+对完全归一化的海洋自吸引 + 负荷项，代码中使用的两组系数为：</p>
+
+$$\mathrm{coefh}(l)=\big(1+k_l-h_l\big)\cdot\frac{3\rho_0}{\rho_{\mathrm{ave}}\,(2l+1)}
+\qquad\text{（海水自身负荷项，乘海面高度系数）}$$
+
+$$\mathrm{coefp}(l)=\frac{1+k_l-h_l}{1+k_l}\qquad\text{（外部载荷项，乘载荷重力势系数）}$$
+
+<p>其含义可以这样理解：$1+k_l$ 给出质量载荷导致的<strong>大地水准面</strong>响应，$h_l$ 给出<strong>固体表面径向位移</strong>，
+两者之差 $1+k_l-h_l$ 正是海平面方程括号内的 $G^{L}-R^{L}$。</p>
+
+<h3>3.4　单个网格单元：均匀圆盘的解析系数</h3>
+
+<p>输入的质量变化按经纬网格给出。把每个网格单元视为一个<strong>均匀圆盘</strong>（角半径 $\alpha$），
+其质量分布已知，可以用解析式直接给出斯托克斯系数（子程序 <code>gdisc</code>）。圆盘对 0 阶（轴对称）系数的贡献为</p>
+
+$$T_l=\frac{\bar P_{l-1}(\cos\alpha)-\bar P_{l+1}(\cos\alpha)}{2},\qquad T_0=\frac{1-\cos\alpha}{2}$$
+
+<p>再乘上单元中心处的勒让德函数与方位角项，并计入负荷勒夫数与归一化水高 $h_a=h/a$：</p>
+
+$$C^{L}_{lm}\mathrel{+}= \frac{T_l}{2l+1}\,\bar P_{lm}(\cos\theta_0)\cos m\psi_0\cdot
+\frac{3}{\rho_{\mathrm{ave}}}\frac{1+k_l}{2l+1}\,h_a$$
+
+<p class="small">注：$h=\dfrac{m_{\text{cell}}}{\text{area}\cdot(10^5)^2}$（水高，cm），$h_a=h/a$（无量纲，$a=6.371\times10^8$ cm）。</p>
+
+<div class="card warn">
+  <h4>关键数值性质：$T_l$ 是两个"≈1 的数"相减</h4>
+  <p>网格单元的角半径很小（0.5° 网格约 $\alpha\approx0.1°$），此时
+  $\bar P_{l\pm1}(\cos\alpha)\approx 1-\mathcal{O}(l^2\alpha^2)$，于是 $T_l$ 的量级只有</p>
+  $$T_l\;\approx\;\frac{(2l+1)\,\alpha^2}{4}\;\sim\;10^{-6}\ldots10^{-4}\quad(l\lesssim180)$$
+  <p>也就是说，<strong>一次减法损失了 4~5 位有效数字</strong>。若 $\bar P$ 本身只有单精度精度（$\sim10^{-8}$ 相对误差），
+  $T_l$ 的相对误差就会被放大到 $10^{-3}$ 量级——这正是<strong>缺陷 1</strong> 的机理（详见第 7 节与图 8）。</p>
+</div>
+
+<h3>3.5　归一化勒让德函数的 Martin 递推</h3>
+
+<p>子程序 <code>martin</code> 用 Martin 递推关系计算完全归一化的 $\bar P_{lm}(x)$（$x=\cos\theta$）：对每个 $m$ 先取初值</p>
+
+$$p_0^{(m)}=\frac{1}{\sqrt2}\prod_{j=1}^{m}\sqrt{1+\frac{1}{2j}}$$
+
+<p>再用关于 $k=l-m$ 的三项递推（$k\ge1$）：</p>
+
+$$p_k = 2x\,p_{k-1}\sqrt{1+\frac{m-\tfrac12}{k}}\;\sqrt{1-\frac{m-\tfrac12}{k+2m}}
+\;-\;p_{k-2}\sqrt{1+\frac{4}{2k+2m-3}}\;\sqrt{1-\frac1k}\;\sqrt{1-\frac{1}{k+2m}}$$
+
+$$\bar P_{lm}(x)=(\sin\theta)^{m}\,p_{l-m}$$
+
+<p class="small">递推中的 $p_{k-2}$ 项仅在 $k>1$ 时使用（代码中用 <code>If(k&gt;1)</code> 保护；gfortran 的 <code>-Wdo-subscript</code>
+会对它误报越界，实测结果与解析值一致）。</p>
+
+<h3>3.6　质量守恒约束与迭代</h3>
+
+<p>海平面方程的解只有在满足<strong>海水质量守恒</strong>时才唯一。程序中把解写成"图案项 + 常数项"：</p>
+
+$$S = \underbrace{C\cdot\big[(G^{L}-R^{L})_{\text{载荷}} + (G^{L}-R^{L})_{\text{海水}}\big]}_{\text{球谐重构}} \;+\; \underbrace{c\cdot C}_{\text{0 阶常数}}$$
+
+<p>其中常数项 $c$（代码中的 <code>amass</code>）由每一步重新计算，强制全球海洋质量变化等于载荷质量的相反数：</p>
+
+$$c=\frac{-\dfrac{m_{\text{total}}}{\rho_0 a^{2}}-\displaystyle\int S\,d\Omega}{\displaystyle\int C\,d\Omega}$$
+
+<p>这里 $\int C\,d\Omega$（<code>ocnint</code>）是海洋面积对应的立体角，$m_{\text{total}}$（<code>tmass</code>）是载荷总质量。
+由于 $S$ 又出现在右边（自吸引 + 负荷反馈），需要迭代求解——这就是代码中 <code>niter</code> 的含义：</p>
+
+<ul>
+  <li><code>niter = 0</code>：不做迭代，等价于把水均匀铺在一层海面上（0 阶解）；</li>
+  <li><code>niter = 2</code>（默认）：迭代两次后自吸引/负荷项基本收敛（见图 5）；</li>
+  <li>每一步迭代结束后，程序都会打印"解算海水质量"与"-载荷质量"，二者应相等（实测相对误差 $\le2\times10^{-15}$）。</li>
+</ul>
+
+<h3>3.7　极移（polar motion）反馈</h3>
+
+<p>海水质量的重新分布会改变地球的惯量张量，进而改变离心力位，反过来影响 $l=2,m=1$ 阶的海平面解。
+代码用三条语句引入该反馈：</p>
+
+<pre><code><span class="c">! //polar motion</span>
+coefpm = (1.+rk(2))*(1.+rk2b-h2b)/(rkf-rk2b)
+pmp    = (1.+rk(2)-h(2)+coefpm)/(1.+rk(2))
+pmh    = pmp*(1.+rk(2))*3.*rho0/rhoave/float(2*l+1)   <span class="c">! ← 原文此处 l 已失效（=181）</span></code></pre>
+
+<p>在迭代中，$(l,m)=(2,1)$ 阶的系数被 <code>pmh</code>／<code>pmp</code> 替换。由于该项只作用于二阶一次项，
+分母本应取 $2\times2+1=5$；原文因误用循环残留值只能取到 363，使反馈强度被削弱约 72 倍
+（<code>pmh</code> 由 0.2667 变成 0.00367，而同一分支的 <code>pmp</code> 仍是放大后的 3.50，
+形成"关掉一半"的不一致状态）。这就是<strong>缺陷 2</strong>。</p>
+
+<!-- ==================================================================== -->
+<h2 id="s4">4　算法流程与实现细节</h2>
+
+<h3>4.1　整体流程</h3>
+
+<div class="flow">
+  <div class="fbox io"><b>输入</b>　<code>land.fcn.1_deg</code>（海陆掩膜）、<code>love_numbers</code>（负荷勒夫数）、
+    <code>Filelist.txt</code>（输入/输出文件清单）、质量变化网格 <span class="f1">经度 纬度 水当量高度(m)</span></div>
+  <div class="farrow">▼</div>
+  <div class="fbox"><b>① 预处理</b>　读掩膜 → 海洋函数 $C$（<code>ofcn = 1 - ivalue</code>）；读勒夫数 →
+    形成 <code>coefh(l)</code>、<code>coefp(l)</code>；计算极移系数 <code>coefpm/pmp/pmh</code></div>
+  <div class="farrow">▼</div>
+  <div class="fbox loop"><b>② 载荷谐波化</b>　逐个网格单元（均匀圆盘解析式 <code>gdisc</code>）累加
+    载荷的重力势球谐系数 <code>synthc/synths</code>，同时累加总质量 <code>tmass</code></div>
+  <div class="farrow">▼</div>
+  <div class="fbox"><b>③ 谐波系数归一化</b>　系数乘地球半径 $a$，得到大地水准面归一化谐波系数（cm）</div>
+  <div class="farrow">▼</div>
+  <div class="fbox"><b>④ 预备量</b>　由 <code>martin</code> 递推算 $\bar P_{lm}(\cos\theta_j)$ 与 $\cos m\psi_i$、$\sin m\psi_i$；
+    由 <code>geoid</code> 积分求海洋面积 <code>ocnint</code></div>
+  <div class="farrow">▼</div>
+  <div class="fbox loop"><b>⑤ 迭代求解海平面方程</b>（<code>niter</code> 次）：<br>
+    a. 用 $C\big[\mathrm{coefh}\cdot S + \mathrm{coefp}\cdot(G^L-R^L)_{\text{载荷}}\big]$ 重构海面高度；
+    $(2,1)$ 阶改用 <code>pmh/pmp</code>；<br>
+    b. <code>geoid</code> 求 0 阶项 → 更新常数 <code>amass</code> 以保证质量守恒；<br>
+    c. 叠加常数项，并由 <code>geoid</code> 重新求海面高度的球谐系数 <span class="loopnote">← 收敛判据来自自吸引反馈</span></div>
+  <div class="farrow">▼</div>
+  <div class="fbox out"><b>⑥ 输出</b>　海平面指纹网格 <span class="f1">经度 纬度 海平面变化(cm)</span>；
+    并打印质量守恒自检（解算海水质量应等于 −载荷质量）</div>
+</div>
+
+<h3>4.2　子程序职责与对应关系</h3>
+
+<table>
+  <thead><tr><th style="width:150px">Fortran</th><th style="width:130px">Python</th><th>职责</th><th style="width:150px">复杂度</th></tr></thead>
+  <tbody>
+    <tr><td><code>Program sleqn</code></td><td><code>run()</code> / <code>solve_one()</code></td>
+        <td>主流程：读文件、逐文件求解、写结果、打印质量自检</td><td>—</td></tr>
+    <tr><td><code>Subroutine martin</code></td><td><code>martin()</code></td>
+        <td>Martin 递推求归一化勒让德函数 $\bar P_{lm}(x)$</td><td>$\mathcal{O}(L^2)$／纬度</td></tr>
+    <tr><td><code>Subroutine geoid</code></td><td><code>geoid()</code></td>
+        <td>对 $\theta,\psi$ 积分求斯托克斯系数（中点求积）</td><td>$\mathcal{O}(n_\phi n_\theta L^2)$</td></tr>
+    <tr><td><code>Subroutine gdisc</code></td><td><code>gdisc()</code></td>
+        <td>均匀圆盘的斯托克斯系数（单网格单元的解析贡献）</td><td>$\mathcal{O}(L^2)$／单元</td></tr>
+  </tbody>
+</table>
+
+<h3>4.3　数组规模与内存</h3>
+
+<table>
+  <thead><tr><th>数组</th><th>维度</th><th class="num">元素数</th><th class="num">内存 (float64)</th><th>说明</th></tr></thead>
+  <tbody>
+    <tr><td><code>plm</code></td><td>(181, 181, 180)</td><td class="num">5.90 M</td><td class="num">47 MB</td><td>全部纬度上的勒让德函数</td></tr>
+    <tr><td><code>plm1</code>（<code>geoid</code> 内）</td><td>(181, 181, 180)</td><td class="num">5.90 M</td><td class="num">47 MB</td><td>乘上 $\sin\theta\,d\theta\,d\psi$ 后的副本</td></tr>
+    <tr><td><code>synthc/synths</code></td><td>(181, 181) ×2</td><td class="num">65 k</td><td class="num">0.5 MB</td><td>载荷重力势球谐系数</td></tr>
+    <tr><td><code>total/ofcn</code></td><td>(360, 180) ×2</td><td class="num">130 k</td><td class="num">1.0 MB</td><td>海面高度／海洋函数网格</td></tr>
+  </tbody>
+</table>
+<p class="small">Fortran 中这些常量边界的局部数组被编译器放入静态存储（gfortran 会给出
+"-Wsurprising: moved from stack to static storage" 提示，单线程使用无影响）。</p>
+
+<h3>4.4　实测性能</h3>
+
+<table>
+  <thead><tr><th>实现</th><th class="num">本算例耗时</th><th>关键实现</th></tr></thead>
+  <tbody>
+    <tr><td>Fortran（<code>-O2 -static</code>）</td><td class="num">≈ 9.4 s</td>
+        <td>标量三重循环（<code>i</code>、<code>l,m</code>、<code>j</code>），每次内层循环做一次乘加</td></tr>
+    <tr><td>Python（NumPy 2.4.6）</td><td class="num">≈ 5.8 s</td>
+        <td>把 $(l,m)$ 求和写成矩阵乘 <code>Tl @ plm[l,:l+1,:]</code>，由 BLAS 以向量化方式完成；
+            <code>geoid</code> 的经度求和用 <code>einsum</code></td></tr>
+  </tbody>
+</table>
+<p class="note card">有意思的是 Python 版反而更快：算法瓶颈是从 $(l,m)$ 系数到 $(i,j)$ 网格的"谐波合成"，
+NumPy 把它交给了高度优化的 BLAS 矩阵乘，而 Fortran 原文是逐点标量循环。若把 Fortran 的
+内层循环也改写成矩阵乘（或加 <code>-O3 -march=native</code>），性能可以再提升一个量级。</p>
+
+<!-- ==================================================================== -->
+<h2 id="s5">5　代码介绍：Fortran 版与 Python 版</h2>
+
+<h3>5.1　文件清单</h3>
+
+<table>
+  <thead><tr><th style="width:230px">文件</th><th>说明</th></tr></thead>
+  <tbody>
+    <tr><td><code>sleqn.f90</code></td><td><b>原文版</b>：与文章所给代码逐行一致（原文注释全部保留，
+        另加 ★ 提示注释与输出单元的 <code>Close</code>）；仅把原文所有单词粘连处按 Fortran 语法还原</td></tr>
+    <tr><td><code>sleqn_dp.f90</code></td><td><b>修正版（推荐实际使用）</b>：算法与公式完全未动，
+        修正第 7 节的 3 处缺陷，并增加输入文件检查</td></tr>
+    <tr><td><code>sleqn.py</code></td><td><b>Python/NumPy 版</b>：与修正版数值一致（逐字节相同），
+        支持 <code>--mask/--love/--list/--niter/--fmt</code> 参数</td></tr>
+    <tr><td><code>sleqn_gui.py</code></td><td><b>PySide6 图形界面</b>：输入文件选择、参数设置、后台计算（进度/取消/日志）、全球指纹图（等经纬 / Robinson 投影，三种色标模式）、剖面、统计与质量守恒自检</td></tr>
+    <tr><td><code>sleqn_static.exe</code><br><code>sleqn_dp_static.exe</code></td>
+        <td>由上述两个源文件静态编译的 Windows 单文件程序（不依赖 MinGW 运行库 DLL）</td></tr>
+    <tr><td><code>双击运行演示.bat</code><br><code>demo\运行_修正版.bat</code>、<code>demo\运行_原文版.bat</code></td>
+        <td>启动器：自动切到程序所在目录、清理旧结果、运行并 <code>pause</code>，避免"窗口一闪而过"</td></tr>
+    <tr><td><code>selftest_sleqn.py</code></td><td>7 项数值自检脚本</td></tr>
+    <tr><td><code>make_demo_data.py</code></td><td>生成合成演示数据（无网盘数据时先跑通流程）</td></tr>
+    <tr><td><code>make_report_figs.py</code></td><td>生成本报告全部配图（含三版本对照、残差分析、收敛性）</td></tr>
+    <tr><td><code>README_sleqn.md</code></td><td>使用说明：输入输出格式、参数、编译验证与偏差归因</td></tr>
+  </tbody>
+</table>
+
+<h3>5.2　Fortran 版结构</h3>
+
+<p>原文代码是一个主程序 + 三个子程序的经典结构，全部使用隐式双精度声明
+<code>Implicit Real*8 (A-H, O-Z)</code>（因此 <code>i-n</code> 为整型、其余为双精度）：</p>
+
+<pre><code><span class="k">Program</span> sleqn
+  <span class="k">Parameter</span> (lmost=180, lsyn=lmost, llove=lmost, nth=180, nphi=360, niter=2)
+  <span class="k">Implicit</span> Real*8 (A-H, O-Z)
+  <span class="c">! ① 读掩膜 → ofcn   ② 读勒夫数 → coefh/coefp   ③ 读 Filelist 逐文件处理</span>
+  <span class="c">! ④ 逐单元 gdisc 累加 synthc/synths   ⑤ martin 求勒让德函数</span>
+  <span class="c">! ⑥ geoid 求 ocnint/amass → 迭代 niter 次 → ⑦ 输出网格</span>
+<span class="k">End Program</span> sleqn
+
+<span class="k">Subroutine</span> martin(lmax, x, plm, ptemp)    <span class="c">! 归一化勒让德函数（Martin 递推）</span>
+<span class="k">Subroutine</span> geoid(dens, rlon, rlat, plm, ccos, ssin, nth, nphi, lmost, lmax, clm1, slm1)
+                                                <span class="c">! 网格 → 斯托克斯系数（中点求积）</span>
+<span class="k">Subroutine</span> gdisc(rlon, rlat, area, rmass, clm1, slm1, lmost, rk)
+                                                <span class="c">! 均匀圆盘的解析斯托克斯系数</span></code></pre>
+
+<p>核心迭代（原文写法，未改动）：</p>
+
+<pre><code><span class="k">Do</span> n = 1, niter
+  <span class="k">Do</span> i = 1, nphi
+    <span class="k">Do</span> l = 0, lmax
+      <span class="k">Do</span> m = 0, l
+        temp = coefh(l)*(hclm(l,m)*ccos(m,i) + hslm(l,m)*ssin(m,i)) &amp;
+             + coefp(l)*(synthc(l,m)*ccos(m,i) + synths(l,m)*ssin(m,i))
+        <span class="k">If</span>((l==2) .And. (m==1)) <span class="k">Then</span>        <span class="c">! //polar motion//</span>
+          temp = pmh*(hclm(l,m)*ccos(m,i) + hslm(l,m)*ssin(m,i)) &amp;
+               + pmp*(synthc(l,m)*ccos(m,i) + synths(l,m)*ssin(m,i))
+        <span class="k">EndIf</span>
+        <span class="k">Do</span> j = 1, nth
+          total(i,j) = total(i,j) + temp*plm(l,m,j)*ofcn(i,j)
+        <span class="k">End Do</span>
+      <span class="k">End Do</span>
+    <span class="k">End Do</span>
+  <span class="k">End Do</span>
+  <span class="k">Call</span> geoid(total, ..., 0, clm1, slm1)          <span class="c">! 0 阶项 → 质量守恒常数</span>
+  amass = (-tmass/rho0/arad**2-rint)/ocnint
+  total = total + amass*ofcn
+  <span class="k">Call</span> geoid(total, ..., lmax, hclm, hslm)       <span class="c">! 更新海面高度系数</span>
+<span class="k">End Do</span></code></pre>
+
+<h3>5.3　Python 版结构</h3>
+
+<p>Python 版保持与 Fortran <strong>逐行对应</strong>的变量命名与数组约定（<code>ofcn(i,j)</code> →
+<code>ofcn[i,j]</code>，纬度索引 <code>j</code> 为第二维），只在两处做了向量化改造：</p>
+
+<table>
+  <thead><tr><th style="width:230px">环节</th><th>Fortran（标量循环）</th><th>Python（向量化）</th></tr></thead>
+  <tbody>
+    <tr><td><code>geoid</code> 的经度求和</td>
+        <td>对每个 $(l,m)$ 逐点累加 <code>dens(j,i)*ccos(m,j)*plm1(l,m,i)</code></td>
+        <td>先做矩阵乘 <code>A = dens.T @ ccos.T</code>，再 <code>einsum('lmi,im-&gt;lm', plm1, A)/(4π)</code></td></tr>
+    <tr><td>迭代中的谐波合成</td>
+        <td>四重循环 <code>i / l,m / j</code></td>
+        <td>对每个 $l$ 构造矩阵 <code>Tl</code>(nphi, l+1)，累加 <code>Tl @ plm[l,:l+1,:]</code>，
+            循环结束后整体乘 <code>ofcn</code></td></tr>
+  </tbody>
+</table>
+
+<p>命令行用法：</p>
+<pre><code>python sleqn.py --mask demo/land.fcn.1_deg --love demo/love_numbers \
+                --list demo/Filelist.txt --niter 2 --fmt e12.4
+<span class="c"># --fmt e12.4（默认，与 Fortran 完全一致的 0.ddddE±ee 格式）</span>
+<span class="c"># --fmt e18.10 / e24.16（更高精度，做数值比对时用）</span></code></pre>
+
+<div class="card note">
+  <h4>Python 版额外做到的几件事</h4>
+  <ul>
+    <li><b>输出格式严格复刻 Fortran</b>：<code>_fmt_fortran_e()</code> 实现 <code>0.ddddE±ee</code> 规则，
+        并正确处理"尾数四舍五入进位到 1.0000 时需重新归一"的边界（例如 0.1 必须写成 <code>0.1000E+00</code>，
+        不能写成 <code>1.0000E-01</code>）；自检第 7 项专门盯这类边界值。</li>
+    <li><b>输入检查</b>：掩膜行数、勒夫数阶数不足、网格不规则等都会给出明确提示。</li>
+    <li><b>路径解析</b>：相对路径先按当前目录找，找不到再按 <code>Filelist.txt</code> 所在目录找。</li>
+  </ul>
+</div>
+
+<!-- ==================================================================== -->
+<h2 id="s6">6　试验设计与验证结果</h2>
+
+<h3>6.1　试验设计</h3>
+
+<p>原文配套测试数据需从网盘下载，为便于验证与复现，本次采用<strong>合成算例</strong>：</p>
+
+<ul>
+  <li><b>海陆掩膜</b>：全球皆为海洋（$C\equiv1$），使质量守恒可以严格核对；另可切换为"矩形合成大陆"；</li>
+  <li><b>负荷勒夫数</b>：PREM 量级的平滑近似（$h_l$、$k_l$），仅用于保证算法路径完整；</li>
+  <li><b>质量载荷</b>：北极附近 5°×5° 的方形"冰盖"，共 100 个 0.5° 网格单元，水当量 1 m，
+     总面积 6.556×10⁴ km²，总质量 <b>65.50 Gt</b>；</li>
+  <li><b>纵向对比</b>：同一算例分别用 <span class="tag">原文版</span><span class="tag o">仅修精度</span>
+      <span class="tag g">修正版</span> 三个 Fortran 版本 + Python 版各跑一遍，逐点比较。</li>
+</ul>
+
+<figure>
+  <img src="figs/fig2_load_slf.png" alt="载荷场与海平面指纹">
+  <figcaption><b>图 3</b>　本算例的输入与输出（等经纬投影；纬度轴 −90~90°N，经度 0~360°E）。
+  <b>(a)</b> 输入载荷：北极附近 0~5°E、75.2~80.2°N 的方形“冰盖”，共 65.5 Gt；
+  <b>(b)</b> 海平面指纹 $S$，色标取对称的 ±1.035 cm —— 载荷区为显著正异常
+  （峰值 <b>+1.035 cm</b>，出现在 76.5°N），远场为负但量级小得多；
+  <b>(c)</b> 同一场把色标放大到 ±0.03 cm：远场海面<b>明显下降</b>（全场最低 −0.0196 cm），
+  呈围绕载荷的宽缓负异常，而载荷处因超量程被饱和。<br>
+  <span class="small">注：(b)(c) 说明海平面指纹的动态范围很大（载荷处约为远场的 50 倍），
+  单幅线性色标图无法同时展示近场与远场；只画 (b) 时会"只见正值"。</span></figcaption>
+</figure>
+
+<div class="card note">
+  <h4>补充验证：指纹峰值为什么不在载荷几何中心？</h4>
+  <p>本算例载荷跨 75.5~80.0°N，面积加权质量质心在 <b>77.58°N</b>，但指纹峰值出现在
+  <b>76.5°N</b>，偏南约 1.1°。为排除算错的可能，做了受控试验：</p>
+  <table>
+    <thead><tr><th style="width:280px">载荷</th><th class="num">质量质心</th>
+      <th class="num">指纹峰值</th><th class="num">偏移</th></tr></thead>
+    <tbody>
+      <tr><td>南半（75.5~77.5°N）</td><td class="num">76.46°N</td><td class="num">76.5°N</td><td class="num">+0.04°</td></tr>
+      <tr><td>北半（78.0~80.0°N）</td><td class="num">78.96°N</td><td class="num">78.5°N</td><td class="num">−0.46°</td></tr>
+      <tr><td><b>完整载荷</b>（75.5~80.0°N）</td><td class="num">77.58°N</td><td class="num">76.5°N</td><td class="num"><b>−1.08°</b></td></tr>
+      <tr><td>同形状载荷平移到 45°N（对照）</td><td class="num">45.21°N</td><td class="num">45.5°N</td><td class="num">+0.29°</td></tr>
+      <tr><td>单个 0.5° 格点（45.25 / 80.25 / 20.25 / −45.25°N）</td>
+          <td class="num">= 载荷位置</td><td class="num">±0.25° 内</td><td class="num">≈ 0</td></tr>
+    </tbody>
+  </table>
+  <p>结论：<b>这是真实的物理效应，不是程序错误</b>。半个载荷各自的峰值都落在自己的质心上；
+  但在 80°N 附近，网格单元面积（即每行质量）随纬度降低增大约 44%，
+  而“自吸引 + 负荷”的核函数非常尖锐（距峰值 2° 处已衰减到约 28%，等效衰减尺度约 1.5°），叠加后峰值被拉向质量更大的南缘。
+  对照试验印证了这一点——把同一块载荷平移到 45°N，该处 $\cosarphi$ 在载荷范围内几乎不变，
+  峰值便回到载荷中心。单格点试验还显示南北半球完全对称（峰值偏移 ±0.25°，即一个网格步长），
+  说明余纬与勒让德函数的几何处理无误。</p>
+</div>
+
+<h3>6.2　自检结果（7 项，全部通过）</h3>
+
+<table>
+  <thead><tr><th style="width:54px">编号</th><th>检验内容</th><th style="width:330px">结果</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>质量守恒：解算海水质量 = −载荷质量</td>
+        <td>相对误差 <b>0 ~ 2×10⁻¹⁵</b>（niter=0/2 及载荷加倍三种情形）</td></tr>
+    <tr><td>2</td><td>线性性：载荷加倍 → 指纹加倍</td><td>相对偏差 <b>0</b></td></tr>
+    <tr><td>3</td><td>迭代有效：niter=0 与 niter=2 的差异</td><td>最大 <b>1.05 cm</b>（自吸引/负荷项量级）</td></tr>
+    <tr><td>4</td><td>指纹形态：载荷处抬升、远场下降</td>
+        <td>载荷处 <b>+0.94 cm</b>、对跖点 <b>−0.018 cm</b>；与圆盘解析粗估（1.25 cm）之比 <b>0.75</b></td></tr>
+    <tr><td>5</td><td>输出网格顺序：$\int S\,d\Omega$ 应等于 $-m/(\rho a^2)$</td>
+        <td>相对误差 <b>7.2×10⁻¹⁵</b>（若误按纬度外层解读则偏差 16 %，说明该检验有效）</td></tr>
+    <tr><td>6</td><td>输出格式与 Fortran <code>F5.1,1X,F5.1,1X,E12.4</code> 一致</td><td>行长 24、字段位置与尾数格式均符合</td></tr>
+    <tr><td>7</td><td><code>E</code> 格式边界值（0.1 等）符合 <code>0.ddddE±ee</code> 规则</td><td>14 个边界值全部通过</td></tr>
+  </tbody>
+</table>
+
+<figure>
+  <img src="figs/fig6_profile.png" alt="经向剖面与分布">
+  <figcaption><b>图 4</b>　(a) 沿载荷所在经度（2.5°E）的经向剖面：修正版与 Python 版重合（绿线），
+  原文版（红虚线）与之最大相差 3.4×10⁻³ cm；蓝色点线为均匀海面（eustatic）参考值 −0.01284 cm。
+  <b>载荷处指纹比均匀海面高出约 80 倍</b>，这就是"指纹"效应的量级。(b) 全场 $S$ 的分布直方图：
+  绝大多数网格点接近 0，只有载荷附近出现明显正异常。</figcaption>
+</figure>
+
+<h3>6.3　迭代收敛性</h3>
+
+<figure>
+  <img src="figs/fig7_convergence.png" alt="迭代收敛与质量守恒">
+  <figcaption><b>图 5</b>　(a) 不同迭代次数解与 <code>niter=4</code> 解的最大差异：
+  $1.05\ \mathrm{cm}\to2.97\times10^{-2}\to2.47\times10^{-3}\to3.17\times10^{-4}$，
+  每次迭代约降一个量级，<b>默认 niter=2 已足够</b>（残差 ~2×10⁻³ cm，约为场最大值的 0.2 %）。
+  (b) 质量守恒相对误差始终在 $10^{-15}$ 量级（机器精度），与迭代次数无关——说明常数项 <code>amass</code>
+  的修正逻辑是严格成立的。</figcaption>
+</figure>
+
+<!-- ==================================================================== -->
+<h2 id="s7">7　发现的缺陷与修正（对比验证的核心产出）</h2>
+
+<p>把三个 Fortran 版本的<strong>高精度输出</strong>分别与 Python 版逐点相减，得到如下结果：</p>
+
+<table>
+  <thead><tr><th>Fortran 版本</th><th class="num">max|Δ| vs Python</th><th class="num">占场最大值（1.0351 cm）</th><th>残差特征</th></tr></thead>
+  <tbody>
+    <tr><td>原文版 <code>sleqn.f90</code></td><td class="num">3.427e-03 cm</td><td class="num">0.331 %</td>
+        <td>97.7 % 的残差功率集中在 $(l,m)=(2,1)$</td></tr>
+    <tr><td>仅修精度（pmh 仍为原文写法）</td><td class="num">1.411e-03 cm</td><td class="num">0.136 %</td>
+        <td>同样是 $(2,1)$ 形态</td></tr>
+    <tr><td><b>修正版 <code>sleqn_dp.f90</code></b></td><td class="num"><b>9.992e-15 cm</b></td><td class="num">≈ 9.7e-13 %</td>
+        <td>纯机器精度噪声</td></tr>
+  </tbody>
+</table>
+
+<p>逐项隔离（两个 Fortran 输出直接相减）：</p>
+<table>
+  <thead><tr><th>单独影响</th><th class="num">max|Δ|</th><th class="num">占比</th></tr></thead>
+  <tbody>
+    <tr><td>缺陷 1（单精度常量）对最终海平面场</td><td class="num">3.978e-03 cm</td><td class="num">0.38 %</td></tr>
+    <tr><td>缺陷 2（<code>pmh</code> 分母）对最终海平面场</td><td class="num">1.411e-03 cm</td><td class="num">0.14 %</td></tr>
+  </tbody>
+</table>
+
+<figure>
+  <img src="figs/fig3_residual_fields.png" alt="残差场三联图">
+  <figcaption><b>图 6</b>　三个版本相对 Python 版的残差场（cm）。上、中两图的残差呈现清晰的
+  <b>波数 1（沿经度）×中纬度加强</b>的图案——这正是 $(l,m)=(2,1)$ 球谐项的空间形态，
+  也就是极移项 <code>pmh</code> 取错分母留下的痕迹；下图（修正版）只剩 10⁻¹⁵ 量级的均匀噪声。</figcaption>
+</figure>
+
+<figure>
+  <img src="figs/fig4_residual_spectrum.png" alt="残差球谐谱">
+  <figcaption><b>图 7</b>　残差的球谐谱（按阶 $l$ 的均方根振幅）：原文版在 $l=2$ 处有一个孤立峰值
+  （对应极移项），其余阶与"仅修精度"版基本重合；修正版全场落在机器精度水平。该图把
+  "到底是哪一项出的问题"直接指认到 $(l,m)=(2,1)$。</figcaption>
+</figure>
+
+<h3>7.1　缺陷 1：字面常量被截断成单精度</h3>
+
+<p>原文中以下常量因为<strong>没有 <code>D0</code> 后缀</strong>，在 Fortran 里属于默认单精度（REAL(4)）字面量，
+会先被截断成 24 位尾数、再参与双精度运算：</p>
+
+<pre><code>1./sqrt(2.)      sqrt(1.+1./2./float(j))     sqrt(2.)      sqrt(2.0)
+3./5.517         6.371E3**2                  6.371E8       pi = 3.14159265
+rhoave = 5.517   0.298   0.604   5.97E27</code></pre>
+
+<p>单精度常量本身只带来 $\sim10^{-8}$ 的相对误差，看似无害。但在 <code>gdisc</code> 中：</p>
+
+<pre><code>temp(l) = (plmart(l-1,0) - plmart(l+1,0))/2.     <span class="c">! 两个 ≈1 的数相减</span></code></pre>
+
+<p>因为单元角半径 $\alpha$ 极小，$temp(l)\sim10^{-6}\ldots10^{-4}$，<strong>相减损失 4~5 位有效数字</strong>，
+于是 $10^{-8}$ 的输入误差被放大到 $10^{-3}$ —— 实测单个网格单元的球谐系数出现 <b>0.3 %~0.6 %</b> 的误差
+（$l=1$ 约 0.6 %，$l=6$ 约 0.3 %）。全部 100 个单元的贡献累加后，最终海平面指纹场偏差达
+<b>3.98×10⁻³ cm（0.38 %）</b>。</p>
+
+<figure>
+  <img src="figs/fig5_coef_error.png" alt="载荷系数相对误差与抵消程度">
+  <figcaption><b>图 8</b>　(a) 原文版与修正版载荷球谐系数的最大相对误差随阶数的变化：
+  常数项附近约 $10^{-8}$（就是单精度常量本身的误差量级），此后被 $temp(l)$ 的抵消迅速放大到
+  $10^{-3}$ 量级并维持。<b>(b)</b> 抵消程度的定量说明：$temp(l)\approx(2l+1)\alpha^2/4$ 随网格变细、
+  随阶数升高而迅速变小，与双精度机器精度 $10^{-16}$ 的"安全距离"越来越短。</figcaption>
+</figure>
+
+<h3>7.2　缺陷 2：<code>pmh</code> 分母引用了已失效的循环变量</h3>
+
+<pre><code><span class="k">Do</span> l = 0, lsyn
+  <span class="k">Do</span> m = 0, l
+    synthc(l,m) = 0. ...
+  <span class="k">End Do</span>
+<span class="k">End Do</span>            <span class="c">! ← 循环结束后 l = lsyn+1 = 181</span>
+...
+pmh = pmp*(1.+rk(2))*3.*rho0/rhoave/float(2*l+1)   <span class="c">! 分母 = 2*181+1 = 363 ≠ 5</span></code></pre>
+
+<p>极移项只在 $(l,m)=(2,1)$ 处生效，其分母应为 $2\times2+1=5$。原文取到 363，
+使 <code>pmh</code> 由应有的 0.2667 变成 0.00367，被削弱约 72 倍；而同一分支中的 <code>pmp</code>
+（3.5037）仍然是放大后的正确值，于是该项处于"半开半关"的不一致状态。
+实测对最终海平面场的影响为 <b>1.41×10⁻³ cm（0.14 %）</b>。</p>
+
+<div class="card warn">
+  <h4>修正方式与替代方案</h4>
+  <p>修正版把分母写死为 <code>float(2*2+1)</code>，并在该行加了 ★ 注释。若本来就不需要极移反馈，
+  也可以按原文注释把 <code>coefpm/pmp/pmh</code> 三行与迭代中的极移分支一起注释掉，
+  此时本缺陷不再有影响。</p>
+  <p>配套的 Python 版与图形界面已把极移反馈做成<strong>运行期开关</strong>
+  （GUI 左侧「含极移（Polar motion）反馈」复选框 / 命令行 <code>--no-polar</code> /
+  库调用 <code>polar=False</code>，默认开启），不需要该反馈时不必再改源码。
+  开关只作用于球谐 $(l,m)=(2,1)$，其独立验证见 <code>_verify/verify_polar_switch.py</code>
+  （差场 99.9999 % 的功率集中在 (2,1)；赤道对称载荷下开/关结果逐点相同）。</p>
+</div>
+
+<h3>7.3　缺陷 3：输出文件未指定 <code>Status</code>，第二次运行必然崩溃</h3>
+
+<p>原文输出文件用 <code>Open(20, File=nameout)</code> 打开，未写 <code>Status</code>。
+gfortran 对<strong>已存在的文件按只读方式打开</strong>，于是第一次运行正常、第二次运行直接报错退出：</p>
+
+<table>
+  <thead><tr><th style="width:280px">输出文件状态</th><th>原文版运行结果</th></tr></thead>
+  <tbody>
+    <tr><td>不存在（首次运行）</td><td><span class="tag g">正常运行</span>输出 64800 行结果</td></tr>
+    <tr><td>已存在（重复运行）</td><td><span class="tag r">崩溃</span>
+        <code>Fortran runtime error: Cannot write to file opened for READ</code>（退出码 2）</td></tr>
+  </tbody>
+</table>
+
+<p>修正版改为 <code>Open(20, File=nameout, Status='replace')</code>（输入文件相应改为 <code>Status='old'</code>），
+可反复运行；配套的 <code>.bat</code> 启动器还会在运行前删除旧结果，双重保险。</p>
+
+<h3>7.4　其他需要注意的问题（原样保留，仅注释说明）</h3>
+
+<table>
+  <thead><tr><th style="width:250px">问题</th><th>说明</th></tr></thead>
+  <tbody>
+    <tr><td><code>alpha = dcos(clat)</code> 是死代码</td>
+        <td><code>clat</code> 已经是角半径的<strong>余弦</strong>，这一行既不是角半径、其后也未被使用
+            （按原意应为 <code>acos(clat)</code>）</td></tr>
+    <tr><td>载荷网格与掩膜网格分辨率不一致</td>
+        <td>主程序 <code>dlon = dlat = 0.5</code>（用于反算单元面积），而掩膜文件名是
+            <code>land.fcn.1_deg</code>（1°）。须与实际数据网格一致，否则单元面积差 4 倍</td></tr>
+    <tr><td>输出精度只有 4 位有效数字</td>
+        <td><code>E12.4</code> 在数值 ~1 cm 时分辨率仅 1e-3 cm，
+            <b>小于约 1e-3 cm 的差异在输出文件里根本看不出来</b>——这也是上述缺陷长期未被发现的原因之一。
+            做精度分析建议改用 <code>E16.6</code> 以上（Python 版用 <code>--fmt e18.10</code>）</td></tr>
+    <tr><td>掩膜第 3 列必须是整数</td>
+        <td><code>ivalue</code> 因隐式类型规则是<strong>整型</strong>（字母 <code>i</code> 不在
+            <code>Implicit Real*8(A-H,O-Z)</code> 范围内），写成 <code>0.0</code>/<code>1.0</code> 会导致表控读入失败</td></tr>
+    <tr><td><code>-std=f95</code> 无法编译</td>
+        <td><code>Real*8</code>、<code>Character*120</code> 是各编译器通行扩展而非 F95 标准写法，
+            用默认标准或 <code>-std=legacy</code> 即可（本次用 gfortran 16.1.0 默认标准，零告警通过）</td></tr>
+    <tr><td>参考文献（Munk and MacDonald, 1960）</td>
+        <td>原文所给 DOI 指向 <i>Geological Magazine</i> 上的一则书评，而 <i>The Rotation of the Earth</i>
+            本身是 Cambridge University Press 出版的书，投稿前建议核对</td></tr>
+  </tbody>
+</table>
+
+<h3>7.5　逐字节级别的最终确认</h3>
+
+<p>把修正版 exe 与 Python 版都用<strong>同一个 <code>E12.4</code> 文本格式</strong>输出后逐行比较：</p>
+
+<table>
+  <thead><tr><th>对比</th><th class="num">总行数</th><th class="num">不同行数</th><th>结论</th></tr></thead>
+  <tbody>
+    <tr><td><code>sleqn_dp_static.exe</code> vs <code>python sleqn.py --fmt e12.4</code></td>
+        <td class="num">64800</td><td class="num"><b>0</b></td>
+        <td><span class="tag g">逐字节完全相同</span></td></tr>
+    <tr><td><code>sleqn_static.exe</code>（原文版）vs 同上</td>
+        <td class="num">64800</td><td class="num">64303（99.23 %）</td>
+        <td>max|Δ| = 3.40e-03 cm，mean|Δ| = 5.81e-04 cm</td></tr>
+  </tbody>
+</table>
+
+<p>另外，对<strong>全部 16381 个载荷球谐系数</strong>做了对比：修正版 Fortran 与 Python 版的最大差异为
+<b>1.3×10⁻¹⁸</b>（相当于双精度舍入误差）；而原文版相对修正版的最大相对误差达 $\sim10^{-3}$ 量级（缺陷 1）。</p>
+
+<div class="card ok">
+  <h4>对比验证的结论</h4>
+  <ol>
+    <li>Python 版与修正版 Fortran <strong>是同一算法的两种实现</strong>：差异为机器精度（10⁻¹⁵ cm 级），
+        文本输出逐字节相同；</li>
+    <li>原文版与它们相差 <strong>0.33 %</strong>，原因已完全归因到第 7.1、7.2 节两处数值缺陷，
+        而不是算法或公式差异；</li>
+    <li>除数值缺陷外，原文代码的骨架（海平面方程、球谐化、圆盘解析式、Martin 递推、
+        质量守恒迭代）经检验<strong>完全正确</strong>：质量守恒、线性性、网格顺序、
+        指纹形态与解析粗估均通过。</li>
+  </ol>
+</div>
+
+<!-- ==================================================================== -->
+<h2 id="s8">8　使用方法与参数说明</h2>
+
+<h3>8.1　输入输出格式</h3>
+
+<table>
+  <thead><tr><th style="width:190px">文件</th><th>格式</th><th style="width:250px">备注</th></tr></thead>
+  <tbody>
+    <tr><td><code>land.fcn.1_deg</code></td><td>每行 <code>经度 纬度 value</code>，共 nth×nphi 行，
+        按纬度带排列（先一个纬度带的所有经度）</td>
+        <td><code>value=1</code> 陆地、<code>0</code> 海洋；<b>必须整数、不能有注释行</b></td></tr>
+    <tr><td><code>love_numbers</code></td><td>前 2 行表头（不解析），其后每行
+        <code>l h_l k_l 保留列</code>，共 181 行（l=0~180）</td>
+        <td><b>必须是 4 列</b>：Fortran 每次固定读 4 个数，列数不足会错位</td></tr>
+    <tr><td><code>Filelist.txt</code></td><td>每行两个文件名：输入数据文件、输出结果文件</td>
+        <td>相对路径按<b>当前工作目录</b>解析（Fortran）</td></tr>
+    <tr><td>质量变化数据</td><td>每行 <code>经度 纬度 水当量高度(m)</code></td>
+        <td>负值置 0；单元面积由 <code>dlon/dlat</code> 反算，须与数据网格一致</td></tr>
+    <tr><td>输出结果</td><td>每行 <code>经度 纬度 海平面变化(cm)</code>，共 nphi×nth 行</td>
+        <td><b>经度外层、纬度内层</b>循环；默认 <code>E12.4</code>（仅 4 位有效数字）</td></tr>
+  </tbody>
+</table>
+
+<h3>8.2　编译与运行</h3>
+
+<pre><code><span class="c"># ==== Fortran ====</span>
+gfortran -O2 -o sleqn_dp.exe sleqn_dp.f90                    <span class="c"># 动态链接</span>
+gfortran -O2 -static -o sleqn_dp.exe sleqn_dp.f90            <span class="c"># 静态链接（推荐，便于分发）</span>
+
+<span class="c"># ==== Python ====</span>
+python make_demo_data.py --out demo                          <span class="c"># 生成合成演示数据</span>
+python sleqn.py --mask demo/land.fcn.1_deg --love demo/love_numbers \
+                --list demo/Filelist.txt --niter 2 --fmt e12.4</code></pre>
+
+<div class="card warn">
+  <h4>为什么"双击 exe 打不开"？</h4>
+  <p>程序按<strong>当前工作目录</strong>读取 <code>land.fcn.1_deg</code>、<code>love_numbers</code>、
+  <code>Filelist.txt</code> 与数据文件。双击 exe 时工作目录就是 exe 所在目录，若那里没有这些文件，
+  程序会立即报错退出、控制台窗口瞬间关闭，看起来就像"打不开"。三种解决办法：</p>
+  <ol>
+    <li>把 exe 与数据文件<b>放在同一个目录</b>（本项目的 <code>demo\</code> 就是这样组织的）；</li>
+    <li>用配套的 <code>.bat</code> 启动器（已自动 <code>cd</code> 到程序目录并 <code>pause</code> 保留窗口）；</li>
+    <li>在命令行里先 <code>cd</code> 到数据目录再运行 exe。</li>
+  </ol>
+  <p class="small">修正版已经内置了文件存在性检查，缺文件时会打印明确的错误提示而不再"闪退"。</p>
+</div>
+
+<div class="card note">
+  <h4>运行时正常的浮点提示</h4>
+  <p>stderr 会出现 <code>IEEE_UNDERFLOW_FLAG IEEE_DENORMAL</code>。这是极点附近
+  $(\sin\theta)^m$（$m$ 最大 180）下溢到非规格化数所致，属正常现象，不影响结果。</p>
+</div>
+
+<h3>8.3　可调参数</h3>
+
+<table>
+  <thead><tr><th style="width:200px">位置（Fortran）</th><th style="width:150px">默认</th><th>说明</th></tr></thead>
+  <tbody>
+    <tr><td><code>Parameter (niter=…)</code></td><td>2</td><td>迭代次数；0 = 不做自吸引迭代（水均匀铺一层）</td></tr>
+    <tr><td><code>Parameter (lmost=…)</code></td><td>180</td><td>最大阶数，须与勒夫数表最高阶一致</td></tr>
+    <tr><td><code>Parameter (nth, nphi)</code></td><td>180, 360</td><td>格点数，须与掩膜、载荷网格一致</td></tr>
+    <tr><td><code>dlon, dlat</code></td><td>0.5°</td><td>载荷网格间隔，必须与实际数据一致</td></tr>
+    <tr><td><code>coefpm/pmp/pmh</code></td><td>打开</td><td>不需要极移反馈时连同迭代中的极移分支一起注释掉；Python 版/GUI 为运行期开关（<code>--no-polar</code> / GUI 复选框），默认开启</td></tr>
+    <tr><td><code>22 Format</code></td><td><code>E12.4</code></td><td>输出精度，做精度分析建议改 <code>E16.6</code> 以上</td></tr>
+  </tbody>
+</table>
+
+<!-- ==================================================================== -->
+<h2 id="s9">9　结论与建议</h2>
+
+<ol>
+  <li><b>算法正确、可用。</b>原文代码实现了完整的海平面方程求解流程（圆盘解析谐波化 + Martin 递推 +
+      自吸引/负荷迭代 + 质量守恒约束），本次验证中的质量守恒、线性性、网格顺序、指纹形态与解析量级
+      检验全部通过。</li>
+  <li><b>存在 3 处需要修正的缺陷</b>（单精度常量、<code>pmh</code> 分母、输出文件 <code>Status</code>），
+      其中前两处会让最终海平面指纹产生 <b>0.1 %~0.4 %</b> 的系统性偏差，第三处会让程序无法重复运行。
+      修正版 <code>sleqn_dp.f90</code> 在不改动任何公式的前提下全部解决。</li>
+  <li><b>两套实现互为验证。</b>Fortran 修正版与 Python 版在 64800 个网格点上<strong>逐字节一致</strong>、
+      在 16381 个载荷球谐系数上差异 $\le1.3\times10^{-18}$，可以放心地相互替代或交叉核对。</li>
+  <li><b>建议</b>：
+    <ul>
+      <li>发表/发行代码时使用 <code>sleqn_dp.f90</code>，并把输出精度提高到 <code>E16.6</code> 以上；</li>
+      <li>用真实数据重跑时，注意两版结果会有 0.1 %~0.4 % 的差异，历史结果若基于原文版需要重新评估；</li>
+      <li>后续可考虑：把迭代内层循环改写为矩阵乘以提速、把 180 阶以上截断误差与勒夫数插值误差纳入误差预算。</li>
+    </ul>
+  </li>
+</ol>
+
+<!-- ==================================================================== -->
+<h2 id="s10">10　文件清单与参考文献</h2>
+
+<h3>10.1　本次产出的文件</h3>
+
+<table>
+  <thead><tr><th style="width:250px">文件</th><th>内容</th></tr></thead>
+  <tbody>
+    <tr><td><code>总结报告.html</code></td><td><b>本报告</b>（单文件，图片已内嵌，可直接分发/打印）</td></tr>
+    <tr><td><code>总结报告_可编辑版.html</code></td><td>本报告的轻量版：图片以相对路径引用 <code>figs/</code>，便于直接编辑 HTML 源码</td></tr>
+    <tr><td><code>html_inline_images.py</code></td><td>把 <code>&lt;img src="figs/…"&gt;</code> 内嵌为 base64，用于从轻量版生成单文件版</td></tr>
+    <tr><td><code>figs/fig1…fig8</code></td><td>本报告全部配图的独立文件</td></tr>
+    <tr><td><code>sleqn.f90</code> / <code>sleqn_dp.f90</code></td><td>原文版 / 修正版 Fortran 源码</td></tr>
+    <tr><td><code>sleqn.py</code></td><td>Python/NumPy 版源码</td></tr>
+    <tr><td><code>sleqn_gui.py</code><br><code>双击运行GUI.bat</code></td><td>PySide6 图形界面：选文件→设参数→后台计算（带进度/可取消）→地图与剖面出图、统计与质量守恒自检</td></tr>
+    <tr><td><code>sleqn_static.exe</code> / <code>sleqn_dp_static.exe</code></td><td>已编译好的 Windows 单文件程序</td></tr>
+    <tr><td><code>selftest_sleqn.py</code></td><td>7 项数值自检</td></tr>
+    <tr><td><code>make_demo_data.py</code> / <code>demo/</code></td><td>合成演示数据生成器与数据</td></tr>
+    <tr><td><code>make_report_figs.py</code></td><td>本报告配图的生成脚本（可复现）</td></tr>
+    <tr><td><code>README_sleqn.md</code></td><td>详细使用说明</td></tr>
+    <tr><td><code>海平面指纹_文章整理.md</code></td><td>原文章节整理、公式补全与问题清单</td></tr>
+  </tbody>
+</table>
+
+<h3>10.2　复现本报告的全部结果</h3>
+
+<pre><code>python make_demo_data.py --out demo          <span class="c"># 1) 生成合成算例</span>
+python selftest_sleqn.py                     <span class="c"># 2) 7 项自检（含质量守恒、线性性、格式检查）</span>
+python make_report_figs.py                   <span class="c"># 3) 三版本对照 + 残差分析 + 全部配图</span>
+<span class="c">#    需要 gfortran 在 PATH 中（本次用 16.1.0）</span></code></pre>
+
+<h3>10.3　参考文献</h3>
+<ol class="small">
+  <li>Adhikari, S., E. R. Ivins, T. Frederikse, F. W. Landerer, and L. Caron (2019), Sea-level fingerprints emergent from GRACE mission data, <i>Earth System Science Data</i>, 11(2), 629–646, doi:10.5194/essd-11-629-2019.</li>
+  <li>Hsu, C. W., and I. Velicogna (2017), Detection of sea level fingerprints derived from GRACE gravity data, <i>Geophysical Research Letters</i>, 44(17), 8953–8961, doi:10.1002/2017gl074070.</li>
+  <li>Munk, W. H., and G. J. F. MacDonald (1960), The Rotation of the Earth, Cambridge University Press.（原文所给 DOI 指向 <i>Geological Magazine</i> 98(4), 352–352 的书评）</li>
+  <li>Pfeffer, J., P. Tregoning, A. Purcell, and M. Sambridge (2018), Multitechnique Assessment of the Interannual to Multidecadal Variability in Steric Sea Levels, <i>Journal of Climate</i>, 31(18), 7583–7597, doi:10.1175/JCLI-D-17-0679.1.</li>
+  <li>Pico, T., J. X. Mitrovica, and A. C. Mix (2020), Sea level fingerprinting of the Bering Strait flooding history, <i>Science Advances</i>, 6(9), doi:10.1126/sciadv.aay2935.</li>
+  <li>Ross, A. C., et al. (2017), Fingerprints of Sea Level Rise on Changing Tides in the Chesapeake and Delaware Bays, <i>JGR-Oceans</i>, 122(10), 8102–8125, doi:10.1002/2017jc012887.</li>
+  <li>Simon, K. M., R. E. M. Riva, M. Kleinherenbrink, and T. Frederikse (2018), The GIA signal at present day in northern Europe and the British Isles, <i>Solid Earth</i>, 9(3), 777–795, doi:10.5194/se-9-777-2018.</li>
+  <li><b>Sun J. W., Wang L. S., Peng Z. R., Fu Z. Y., and Chen C (2022). The sea level fingerprints of global terrestrial water storage changes detected by GRACE and GRACE-FO data, <i>Pure and Applied Geophysics</i>, 179(9).</b>（本报告所述方法与代码的来源）</li>
+  <li>Tang, L., et al. (2020), Seismic impact of large earthquakes on estimating global mean ocean mass change from GRACE, doi:10.3390/rs12060935.</li>
+  <li>Wang, L., C. Chen, X. Ma, and J. DU (2018), Sea level fingerprints of ice sheet melting and its impacts on monitoring results of GRACE, <i>Chinese Journal of Geophysics</i>, 61(7), 2679–2690.</li>
+</ol>
+
+<hr>
+<p class="small">报告生成：由本项目脚本与实测数据自动汇总；所有数值均为本机实测（gfortran 16.1.0 / MinGW-w64 UCRT，
+Python 3.14.6 + NumPy 2.4.6 + matplotlib 3.11.1），可在本机用第 10.2 节的命令复现。</p>
+
+</div>
+<script>
+// MathJax 加载失败（如离线）时给出提示，避免用户只看到 $...$ 源码
+window.addEventListener('load', function () {
+  setTimeout(function () {
+    var ok = window.MathJax && window.MathJax.startup && window.MathJax.startup.document;
+    if (!ok) { var d = document.getElementById('mjx-warn'); if (d) d.style.display = 'block'; }
+  }, 4000);
+});
+</script>
+</body>
+</html>

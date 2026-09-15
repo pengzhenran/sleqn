@@ -1,0 +1,496 @@
+海洋、陆地，及大气三者之间在全球范围内的水体交换，将导致水质量不均匀地重新分配，伴随冰川均衡调整，会激发固体地球的弹性和黏弹性响应，继而造成全球海平面呈现出空间差异，具有典型的区域性特征，即海平面指纹
+（
+Sea Level Fingerprints, SLF
+）
+。
+早在
+ 19 
+世纪学者们就意识到这种指纹效应，并给出了最基本的物理解释。近些年来，随着冰盖冰川整体消融的加速
+，主要受这些因素驱动的海平面指纹逐渐成为区域海平面的主要表征形式。因此，在研究海洋问题时，考虑海平面指纹的影响变得愈发重要。
+研究大洋间水体质量交换时，海平面指纹的差异可能导致估算的海水迁移质量改变一半左右
+（
+Hsu and Velicogna, 2017
+）
+；利用卫星测高和卫星重力数据，更精准地监测格陵兰及南极冰盖的消融，区域乃至全球海平面的变化，考虑海平面指纹的渗透影响是其中的关键
+（
+Adhikari et al., 2019; Pfeffer et al., 2018; Wang et al., 2018
+）
+。除此之外，对海洋区域气候事件的追踪
+（
+Pico et al., 2020
+）
+、冰川均衡调整
+（
+GIA
+）
+的探究
+（
+Simon et al., 2018
+）
+、潮汐的监测
+（
+Ross et al., 2017
+）
+，以及大地震对海洋质量变化的影响研究
+（
+Tang et al., 2020
+）
+，海平面指纹的影响都是需要重点关注的问题。
+计算海平面指纹需要借助海平面方程，在只考虑弹性响应影响下，计算主要依赖于大地水准面与固体地球表面弹性负荷形变之间的差异。我们可以对某一时刻的海平面变化进行定义：
+
+其中
+
+分别为余纬和东经，
+
+代表海平面的变化，
+ 
+为海洋函数（
+Munk and MacDonald, 1960
+），在海洋及陆地区域分别为 1 与 0；
+
+与
+
+为负荷 
+L
+ 影响下大地水准面异常及固体表面径向位移。具体计算流程方法可参见 
+Sun et al., (2022)
+。
+依据以上方法，以全球陆地水质量变化长期趋势信号为输入进行计算，可得到陆地水储量质量变化引起的海平面指纹（下图），其中红色实线为平均值。
+
+陆地水储量变化引起的海平面指纹
+
+代码（Fortran95）及简要使用说明：
+读者可针对以下第 34/43/54 行代码进行更改，将文件名修改为自己计算机内存在的本地文件，进而构建出可运行的exe程序即可（
+具体代码作用可见代码块注释
+）。我们提供可供测试的一组文件，可点击“阅读原文”跳转网盘进行下载。
+
+Programsleqn
+
+!//变量定义
+Parameter(lmost=180)
+Parameter(lsyn=lmost)
+Parameter(llove=lmost)
+Parameter(nth=180, nphi=360, niter=2)
+ImplicitReal *8(A-H, O-Z)
+Dimensionhclm(0:lmost, 0:lmost), hslm(0:lmost, 0:lmost), &
+clm1(0:lmost, 0:lmost), slm1(0:lmost, 0:lmost), &
+synthc(0:lsyn, 0:lsyn), synths(0:lsyn, 0:lsyn), &
+plmart(0:lmost, 0:lmost), pdum(0:lmost), plm(0:lmost, 0:lmost, nth), &     !勒让德函数一套变量
+ccos(0:lmost, nphi), ssin(0:lmost, nphi), &
+coefp(0:llove), coefh(0:llove), rk(0:llove), h(0:llove), &     !love数一套变量
+ofcn(nphi,nth), &
+rlon(nphi),&
+rlat(nth),&
+total(nphi,nth)
+Character*120 namein, nameout
+11Format (1X)
+22Format (F5.1, 1X, F5.1, 1X, E12.4) 
+pi = 3.14159265
+dtr = pi/180.0
+rho0 = 1.0
+rhoave = 5.517
+arad = 6.371E8
+rkf=0.00328475/0.00348118
+rk2b=0.298
+h2b=0.604
+lmax = lmost
+!变量定义//
+
+!//赋值海面指代及love数
+  Open (80, File='land.fcn.1_deg')  !陆地区域mask文件
+Doj = 1, nth
+Doi = 1, nphi
+Read(80, *) rlon(i), rlat(j), ivalue
+ofcn(i,j) = float(1-ivalue)
+      !write (99,*) rlon(i),rlat(j),ofcn(i,j)
+EndDo
+EndDo
+
+Open(90, File='love_numbers', Status='unknown') !love数文件名
+Read(90, 11)
+Read(90, 11)
+Dol = 0, llove
+Read(90, *) ldum, h(l), rk(l), rll
+coefh(l) = (1.+rk(l)-h(l))*3.*rho0/rhoave/float(2*l+1)
+coefp(l) = (1.+rk(l)-h(l))/(rk(l)+1)
+EndDo
+!赋值海面指代及love数//
+
+!//读入输入文件
+  Open (100, File='Filelist.txt')  !控制文件，需要两列值，分别是输入文件名与输出结果文件名
+
+300Continue
+Read(100, *, End=400) namein, nameout
+Open(10, File=namein)
+Open(20, File=nameout)
+  !niter是迭代次数。若为0则表示水均匀地分布在海一层。
+Print*, 'done reading from the input file: ', namein
+!读入输入文件//
+
+Dol = 0, lsyn
+Dom = 0, l
+synthc(l,m) = 0.
+synths(l,m) = 0.
+EndDo
+EndDo
+!//polar motion
+coefpm=(1.+rk(2))*(1.+rk2b-h2b)/(rkf-rk2b)
+  !The following 2 lines put in the effects of polar motion feedback.
+  !If you don't want to include that feedback, comment out these 2 lines.   
+pmp=(1.+rk(2)-h(2)+coefpm)/(1.+rk(2))
+pmh=pmp*(1.+rk(2))*3.*rho0/rhoave/float(2*l+1)
+!polar motion//
+
+!//输入文件类型
+smass = 0.
+areatot = 0.
+
+dlon = 0.5
+dlat = 0.5    !分别为经度和纬度的间隔
+area1 = dlat*dlon*dtr*dtr*6.371E3**2
+    !area1是不包括纬度因素的网格点面积
+
+50Continue
+Read(10, *, End=60) xlon, xlat, thick
+If(thick<0)thick=0
+
+    !thick = thick / 100
+    !读取数据依次为网格点经度、纬度、水高增量(m)
+
+xlat = 90. - xlat
+x1 = xlat - dlat/2.
+x2 = xlat + dlat/2.
+If(x1<0.) x1 = 0.
+If(x2>180.) x2 = 180.
+xlon = xlon*dtr
+xlat = xlat*dtr
+area = dlon*dtr*(dcos(x1*dtr)-dcos(x2*dtr))*6.371E3**2
+    !area=area1*dsin(xlat)
+rmass = thick*100.0*1.00*(area*1.E10)
+smass = smass + rmass
+areatot = areatot + area
+
+Callgdisc(xlon, xlat, area, rmass, synthc, synths, lsyn, rk)
+
+Goto50
+    60 Continue
+!输入文件类型//
+
+
+!//此时，程序已经计算出由：[(施加的表面载荷)加上(该表面载荷引起的固体地球变形)]等引起的重力势的球谐系数。结果存储在synthc、synths中。//
+
+!//计算勒让德函数和cos(m*phi), sin(m*phi)
+Doj = 1, nth
+x = cos((90.-rlat(j))*dtr)
+
+Callmartin(lmost, x, plmart, pdum)
+
+Dol = 0, lmax
+Dom = 0, l
+If(m/=0) Then
+plm(l,m, j) = plmart(l, m)*2.0
+Else
+plm(l,m, j) = plmart(l, m)*sqrt(2.0)
+EndIf
+EndDo
+EndDo
+EndDo
+
+Doi = 1, nphi
+Dom = 0, lmax
+phase = float(m)*rlon(i)*dtr
+ccos(m,i) = cos(phase)
+ssin(m,i) = sin(phase)
+EndDo
+EndDo
+!计算勒让德函数和cos(m*phi), sin(m*phi)//
+!//归一化谐波系数
+tmass = synthc(0, 0)*5.97E27
+  !tmass是冰盖的质量(gm)
+  !球谐系数乘以地球半径，这样的系数就是大地水准面的归一化谐波系数
+Dol = 0, lsyn
+Dom = 0, l
+synthc(l,m) = synthc(l, m)*arad
+synths(l,m) = synths(l, m)*arad
+EndDo
+EndDo
+!归一化谐波系数//
+!//整合海平面方程
+Callgeoid(ofcn, rlon, rlat, plm, ccos, ssin, nth, nphi, lmost, 0, clm1, slm1)
+ocnint = clm1(0, 0)*4.*pi
+!  Print *, 'ocnint: ', ocnint
+!整合海平面方程//
+!//迭代
+amass = -tmass/rho0/arad**2/ocnint
+  !对于空间常数的0阶解，将ocn高度设为质量均匀分布后的高度
+!  Print *, 'the ocean height increase, if the mass is distributed'
+!  Print *, '  uniformly, is: ', amass
+
+Doi = 1, nphi
+Doj = 1, nth
+total(i,j) = amass*ofcn(i, j)
+EndDo
+EndDo
+
+Callgeoid(total, rlon, rlat, plm, ccos, ssin, nth, nphi, lmost, lmax, hclm, hslm)
+  !求出海平面高度的谐波系数，作为起始值
+
+If(niter==0) Goto 70
+
+Don = 1, niter
+
+!    Print *, 'about to start iteration #', n
+
+Doi = 1, nphi
+Doj = 1, nth
+total(i,j) = 0.
+EndDo
+EndDo
+
+Doi = 1, nphi
+Dol = 0, lmax
+Dom = 0, l   
+temp = coefh(l)*(hclm(l,m)*ccos(m,i) + hslm(l,m)*ssin(m,i)) + coefp(l)*(synthc(l,m)*ccos(m,i) + synths(l,m)*ssin(m,i))
+
+If((l==2) .And. (m==1)) Then     !//polar motion//
+temp = pmh*(hclm(l,m)*ccos(m,i) + hslm(l,m)*ssin(m,i)) + pmp*(synthc(l,m)*ccos(m,i) + synths(l,m)*ssin(m,i))
+EndIf
+
+Doj = 1, nth
+total(i,j) = total(i, j) + temp*plm(l, m, j)*ofcn(i, j)
+EndDo
+EndDo
+EndDo
+EndDo
+
+Callgeoid(total, rlon, rlat, plm, ccos, ssin, nth, nphi, lmost, 0, clm1, slm1)
+
+rint = clm1(0, 0)*4.*pi
+!    Print *, 'integral: ', rint
+
+amass = (-tmass/rho0/arad**2-rint)/ocnint
+
+Doi = 1, nphi
+Doj = 1, nth
+total(i,j) = total(i, j) + amass*ofcn(i, j)
+EndDo
+EndDo
+
+!  find the  harmonic coeffs of sea level height
+Callgeoid(total, rlon, rlat, plm, ccos, ssin, nth, nphi, lmost, lmax, hclm, hslm)
+
+EndDo
+
+70Continue
+!迭代//
+!//输出文件
+zmass = hclm(0, 0)*arad**2*rho0*4.*pi/1.E15
+!  Print *, 'after iterating, the mass in gton is (should = -', tmass/1.E15, '): ', zmass
+
+Doi = 1, nphi
+Doj = 1, nth
+Write(20, 22) rlon(i), rlat(j), total(i, j)
+EndDo
+EndDo
+Print*, 'done all from ', namein
+!输出文件//
+Goto300
+400Continue
+
+Stop
+EndProgram sleqn
+
+
+Subroutinemartin(lmax, x, plm, ptemp)
+!//使用Martin的递归关系//
+
+ImplicitReal *8(A-H, O-Z)
+Dimensionplm(0:lmax, 0:lmax), ptemp(0:lmax)
+
+rsin = sqrt(1.-x**2)
+
+Dol = 0, lmax
+Dom = 0, lmax
+plm(l,m) = 0.
+EndDo
+EndDo
+
+Dom = 0, lmax
+
+If(m==0) Then
+ptemp(0) = 1./sqrt(2.)
+Else
+ptemp(0) = 1.0
+Doj = 1, m
+ptemp(0) = ptemp(0)*sqrt(1.+1./2./float(j))
+EndDo
+ptemp(0) = ptemp(0)/sqrt(2.)
+EndIf
+
+If((lmax-m)>0) Then
+Dok = 1, lmax - m
+ptemp(k) = 2.*x*ptemp(k-1)*sqrt(1.+(float(m)-0.5)/float(k))*sqrt(1.-(float(m)-0.5)/float(k+2*m))
+If(k>1) Then
+ptemp(k) = ptemp(k) - ptemp(k-2)*sqrt(1.+4./float(2*k+2*m-3))*sqrt(1.-1./float(k))*sqrt(1.-1./float(k+2*m))
+EndIf
+EndDo
+EndIf
+
+Dol = m, lmax
+plm(l,m) = rsin**m*ptemp(l-m)
+EndDo
+
+EndDo
+
+Return
+EndSubroutine martin
+
+
+Subroutinegeoid(dens, rlon, rlat, plm, ccos, ssin, nth, nphi, lmost, lmax, clm1, slm1)
+!//计算球谐系数//
+
+!//变量的定义与赋值
+ImplicitReal *8(A-H, O-Z)
+Dimensionth(nth), phi(nphi), dens(nphi, nth), &
+rlat(nth),rlon(nphi), &
+clm1(0:lmost, 0:lmost), slm1(0:lmost, 0:lmost), &
+plm(0:lmost, 0:lmost, nth), &
+plm1(0:lmost, 0:lmost, nth), &
+ccos(0:lmost, nphi), ssin(0:lmost, nphi)
+
+If(lmax>lmost) Then
+Print*, 'error #35: ', lmax, lmost
+Stop
+EndIf
+
+pi = 3.14159265D0
+dtr = pi/180.D0
+dphi = 360./float(nphi)
+dth = 180./float(nth)
+dphi = dphi*dtr
+dth = dth*dtr
+  !dth和dphi是theta和phi的间隔(在网格数据中)
+
+Doi = 1, nphi
+phi(i) = rlon(i)*dtr
+EndDo
+Doj = 1, nth
+th(j) = (90.D0-rlat(j))*dtr
+EndDo
+!变量的定义与赋值//
+!//将勒让德函数的值乘以sin(theta)*c保存在plm数组中
+Doi = 1, nth
+Dol = 0, lmax
+Dom = 0, l
+s = dsin(th(i))
+plm1(l,m, i) = plm(l, m, i)*dth*dphi*s
+EndDo
+EndDo
+EndDo
+!将勒让德函数的值乘以sin(theta)*c保存在plm数组中//
+!//通过对theta和phi积分，得到l和m的斯托克斯系数
+Dol = 0, lmax
+Dom = 0, l
+clm1(l,m) = 0.
+slm1(l,m) = 0.
+EndDo
+EndDo
+
+Doi = 1, nth
+    !print *,'about to start i= ',i, ' out of ',nth
+Doj = 1, nphi
+Dom = 0, lmax
+tempc = dens(j, i)*ccos(m, j)
+temps = dens(j, i)*ssin(m, j)
+Dol = m, lmax
+clm1(l,m) = clm1(l, m) + tempc*plm1(l, m, i)
+slm1(l,m) = slm1(l, m) + temps*plm1(l, m, i)
+EndDo
+EndDo
+EndDo
+EndDo
+
+Dom = 0, lmax
+Dol = m, lmax
+clm1(l,m) = clm1(l, m)/4./pi
+slm1(l,m) = slm1(l, m)/4./pi
+EndDo
+EndDo
+!通过对theta和phi积分，得到l和m的斯托克斯系数//
+
+Return
+EndSubroutine geoid
+
+
+Subroutinegdisc(rlon, rlat, area, rmass, clm1, slm1, lmost, rk)
+!计算均匀圆盘的斯托克斯系数
+
+Parameter(lmax=180, lmax1=lmax+1)
+ImplicitReal *8(A-H, O-Z)
+Dimensionplmart(0:lmax1, 0:lmax1), pdum(0:lmax1), rk(0:lmost), temp(0:lmax), clm1(0:lmost, 0:lmost), slm1(0:lmost, 0:lmost)
+
+If(lmost>lmax) Then
+Print*, 'error #5 ', lmost, lmax
+Stop
+EndIf
+
+pi = 3.14159265
+dtr = pi/180.
+
+clat = 1. - area/6.371E3**2/2./pi
+alpha = dcos(clat)
+  !alpha是角半径(以度为单位)
+
+Callmartin(lmax1, clat, plmart, pdum)
+
+Dol = 0, lmax1
+plmart(l,0) = plmart(l, 0)*sqrt(2./float(2*l+1))
+EndDo
+Dol = 1, lmax
+temp(l) = (plmart(l-1,0)-plmart(l+1,0))/2.
+EndDo
+temp(0) = (1.-clat)/2.
+clat = cos(rlat)
+
+Callmartin(lmax1, clat, plmart, pdum)
+
+Dol = 0, lmax
+Dom = 0, l
+plmart(l,m) = plmart(l, m)*sqrt(2.)
+If(m/=0) plmart(l, m) = plmart(l, m)*sqrt(2.)
+EndDo
+EndDo
+
+h = rmass/(area*1.E5**2)
+  !h是水高，单位为cm
+ha = h/6.371E8
+Dol = 0, lmax
+Dom = 0, l
+wc = temp(l)/float(2*l+1)*plmart(l, m)*cos(m*rlon)
+ws = temp(l)/float(2*l+1)*plmart(l, m)*sin(m*rlon)
+clm1(l,m) = clm1(l, m) + wc*3./5.517*(1.+rk(l))/float(2*l+1)*ha
+slm1(l,m) = slm1(l, m) + ws*3./5.517*(1.+rk(l))/float(2*l+1)*ha
+EndDo
+EndDo
+
+Return
+End Subroutine gdisc
+
+
+
+References
+
+Adhikari, S., E. R. Ivins, T. Frederikse, F. W. Landerer, and L. Caron (2019), Sea-level fingerprints emergent from GRACE mission data, Earth System Science Data,11(2), 629-646, doi:10.5194/essd-11-629-2019.
+Hsu, C. W., and I. Velicogna (2017), Detection of sea level fingerprints derived from GRACE gravity data, GEOPHYSICAL RESEARCH LETTERS, 44(17), 8953-8961, doi:Artn L074070 10.1002/2017gl074070.
+Munk, W. H., and G. J. F. MacDonald (1960), The Rotation of the Earth, GEOLOGICAL MAGAZINE, 98(4), 352-352, doi:10.1017/S0016756800060726.
+Pfeffer, J., P. Tregoning, A. Purcell, and M. Sambridge (2018), Multitechnique Assessment of the Interannual to Multidecadal Variability in Steric Sea Levels: A Comparative Analysis of Climate Mode Fingerprints, JOURNAL OF CLIMATE, 31(18), 7583-7597, doi:10.1175/Jcli-D-17-0679.1.
+Pico, T., J. X. Mitrovica, and A. C. Mix (2020), Sea level fingerprinting of the Bering Strait flooding history detects the source of the Younger Dryas climate event, Science Advances, 6(9), doi:10.1126/sciadv.aay2935.
+Ross, A. C., R. G. Najjar, M. Li, S. B. Lee, F. Zhang, and W. Liu (2017), Fingerprints of Sea Level Rise on Changing Tides in the Chesapeake and Delaware Bays, JOURNAL OF GEOPHYSICAL RESEARCH-OCEANS, 122(10), 8102-8125, doi:10.1002/2017jc012887.
+Simon, K. M., R. E. M. Riva, M. Kleinherenbrink, and T. Frederikse (2018), The glacial isostatic adjustment signal at present day in northern Europe and the British Isles estimated from geodetic observations and geophysical models, Solid Earth, 9(3), 777-795, doi:10.5194/se-9-777-2018.
+Sun J. W., Wang L. S., Peng Z. R., Fu Z. Y., and Chen C (
+2022
+). 
+The sea level fingerprints of global terrestrial water storage changes detected by Grace and Grace-Fo data
+[J]. Pure and Applied Geophysics, 179(9).
+Tang, L., J. Li, J. Chen, S. Y. Wang, R. Wang, and X. Hu (2020), Seismic impact of large earthquakes on estimating global mean ocean mass change from GRACE, edited, doi:10.3390/rs12060935.
+Wang, L., C. Chen, X. Ma,  and J. DU (2018). Sea level fingerprints of ice sheet melting and its impacts on monitoring results of GRACE. Chinese Journal of Geophysics, 61(7), 2679-2690.

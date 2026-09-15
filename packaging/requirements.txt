@@ -1,0 +1,19 @@
+# 打包环境依赖（顶层固定版本）
+#
+# 只装运行程序真正需要的东西。装法见 create_env.ps1，
+# 精确到传递依赖的锁定版本见 requirements-lock.txt。
+#
+# 运行时（随安装包分发）
+numpy==2.1.3                 # 数值核心 sleqn.py 唯一依赖
+PySide6-Essentials==6.8.3    # 图形界面。**刻意不用完整的 PySide6**：
+                             # 完整包会带上 PySide6-Addons，其中 Qt Charts /
+                             # Qt Data Visualization 是 GPL-only，会传染打包
+                             # 出来的程序；Essentials 已含 QtCore/QtGui/QtWidgets，
+                             # 绘图全部交给 matplotlib，够用。
+matplotlib==3.10.0           # 所有出图（地图/剖面/配图），QtAgg 后端
+cartopy==0.25.0              # Robinson 投影与岸线；离线底图见 cartopy_data/
+#   ↑ cartopy 会带 shapely / pyproj / pyshp / certifi；pyproj 自带 PROJ 数据。
+
+# 构建期（不随安装包分发）
+pyinstaller==6.22.3          # GPL-2.0 with exception：允许打包出的程序采用
+                             # 任意许可，且本身不随包分发
