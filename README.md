@@ -39,6 +39,7 @@ Windows 10/11（64 位）桌面程序 · 免费 · 完全离线运行
 - 安装包约 52.9 MB，安装后占用约 200 MB，建议内存 8 GB 以上
 - 下载：[Releases](https://github.com/pengzhenran/sleqn/releases/latest) 页面中的 `sleqn_Setup_v1.0.1.exe`
   （GitHub 的资产名不支持中文，这里用 ASCII 名；它与网盘分发的 `海平面指纹_Setup_v1.0.1.exe` 是同一个文件，可对比下面的 SHA256）
+- 国内下载较慢，也可以用夸克网盘：<https://pan.quark.cn/s/1e1e71df51ce>（二维码见文末）
 - 双击安装程序按向导完成，桌面和开始菜单会生成快捷方式；卸载通过「设置 → 应用」或开始菜单中的卸载项
 
 SHA256（v1.0.1）：
@@ -93,3 +94,11 @@ SHA256（v1.0.1）：
 作者：彭桢燃（中国地质大学（武汉））　邮箱：zhenran.peng@cug.edu.cn
 
 使用中遇到问题、发现异常结果，或希望增加新功能，欢迎提交 [Issue](https://github.com/pengzhenran/sleqn/issues) 或邮件反馈；反馈时附上程序「日志」页签的内容，便于定位。
+
+## 关注与获取
+
+| 课题组公众号「地球重力与人类生活（TVGG）」 | 夸克网盘（安装包，国内下载更快） |
+| :---: | :---: |
+| <img src="docs/qr-tvgg.jpg" width="200" alt="课题组公众号二维码"> | <img src="docs/qr-quark.png" width="200" alt="夸克网盘二维码"> |
+| 扫码关注，获取工具与更新 | 扫码打开网盘分享（`海平面指纹_Setup_v1.0.1.exe`） |
+
