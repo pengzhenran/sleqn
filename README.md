@@ -37,7 +37,8 @@ Windows 10/11（64 位）桌面程序 · 免费 · 完全离线运行
 ## 下载与安装
 
 - 安装包约 52.9 MB，安装后占用约 200 MB，建议内存 8 GB 以上
-- 下载：[Releases](https://github.com/pengzhenran/sleqn/releases/latest) 页面中的 `海平面指纹_Setup_v1.0.1.exe`
+- 下载：[Releases](https://github.com/pengzhenran/sleqn/releases/latest) 页面中的 `sleqn_Setup_v1.0.1.exe`
+  （GitHub 的资产名不支持中文，这里用 ASCII 名；它与网盘分发的 `海平面指纹_Setup_v1.0.1.exe` 是同一个文件，可对比下面的 SHA256）
 - 双击安装程序按向导完成，桌面和开始菜单会生成快捷方式；卸载通过「设置 → 应用」或开始菜单中的卸载项
 
 SHA256（v1.0.1）：
